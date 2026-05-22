@@ -192,4 +192,52 @@ router.get('/venue/:venueId', protect, async (req, res) => {
   }
 });
 
+// @desc    Update booking status (Confirm / Cancel)
+// @route   PUT /api/bookings/:id/status
+// @access  Private (venue_owner or admin)
+router.put('/:id/status', protect, async (req, res) => {
+  try {
+    const { status } = req.body;
+    if (!['confirmed', 'cancelled', 'completed', 'pending'].includes(status)) {
+      return res.status(400).json({ success: false, message: 'Invalid status' });
+    }
+
+    const booking = await Booking.findById(req.params.id);
+    if (!booking) {
+      return res.status(404).json({ success: false, message: 'Booking not found' });
+    }
+
+    // Verify ownership of the venue for the booking
+    const venue = await Venue.findById(booking.venue);
+    if (!venue) {
+      return res.status(404).json({ success: false, message: 'Venue not found' });
+    }
+
+    if (venue.owner.toString() !== req.user._id.toString() && req.user.role !== 'admin') {
+      return res.status(403).json({ success: false, message: 'Not authorized to update this booking' });
+    }
+
+    booking.status = status;
+    if (status === 'cancelled') {
+      booking.paymentStatus = 'refunded';
+    } else if (status === 'confirmed') {
+      booking.paymentStatus = 'paid';
+    }
+    await booking.save();
+
+    // Emit real-time update
+    if (req.app.get('io')) {
+      req.app.get('io').emit('booking:updated', {
+        venueId: booking.venue,
+        booking,
+      });
+    }
+
+    res.json({ success: true, data: booking });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
 module.exports = router;
+

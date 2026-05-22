@@ -92,6 +92,19 @@
       "skillLevel": "intermediate",
       "createdAt": "2026-05-22T15:59:43.346Z",
       "updatedAt": "2026-05-22T15:59:43.349Z"
+    },
+    {
+      "_id": "5d9745bdc26f6385f7c92fe9",
+      "username": "temp_user_test",
+      "email": "temp@playsphere.in",
+      "password": "$2a$10$kiJH3PWrDdMteLWEUlQ2neJ00i4W2GCnIQ9VYYfU4xzV1mb2dUCnG",
+      "phone": "",
+      "avatar": "",
+      "role": "user",
+      "preferredSports": [],
+      "skillLevel": "intermediate",
+      "createdAt": "2026-05-22T16:20:57.354Z",
+      "updatedAt": "2026-05-22T16:20:57.356Z"
     }
   ],
   "venues": [
@@ -1055,12 +1068,12 @@
       "duration": 1,
       "totalPrice": 900,
       "playerCount": 4,
-      "status": "confirmed",
-      "paymentStatus": "paid",
+      "status": "cancelled",
+      "paymentStatus": "refunded",
       "isAgentBooked": false,
       "notes": "",
       "createdAt": "2026-05-22T15:54:49.575Z",
-      "updatedAt": "2026-05-22T15:54:49.575Z"
+      "updatedAt": "2026-05-22T16:18:20.160Z"
     },
     {
       "_id": "51e1e0e3edccf3cdc7e3a318",

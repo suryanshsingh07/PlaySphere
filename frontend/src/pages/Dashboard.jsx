@@ -201,7 +201,8 @@ function StatCard({ icon: Icon, label, value, sub, color, bgColor, trend, sparkD
       border: `1px solid ${color}22`,
       position: 'relative',
       overflow: 'hidden',
-      transition: 'all 0.3s ease'
+      transition: 'all 0.3s ease',
+      cursor: 'pointer'
     }}
       onMouseEnter={e => e.currentTarget.style.transform = 'translateY(-2px)'}
       onMouseLeave={e => e.currentTarget.style.transform = 'translateY(0)'}
@@ -305,7 +306,27 @@ export default function Dashboard() {
     }
   };
 
+  const handleUpdateStatus = async (bookingId, newStatus) => {
+    if (!window.confirm(`Are you sure you want to change the status of this booking to "${newStatus}"?`)) return;
+
+    try {
+      const res = await axios.put(
+        `/api/bookings/${bookingId}/status`,
+        { status: newStatus },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      if (res.data.success) {
+        // Refresh dashboard data to show correct revenues and status
+        fetchDashboardData();
+      }
+    } catch (err) {
+      console.error(err);
+      alert(err.response?.data?.message || 'Failed to update booking status.');
+    }
+  };
+
   useEffect(() => { fetchDashboardData(); }, []);
+
 
   if (loading) {
     return (
@@ -639,7 +660,7 @@ export default function Dashboard() {
             <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', minWidth: '640px' }}>
               <thead>
                 <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
-                  {['User', 'Venue', 'Sport', 'Date & Time', 'Status', 'Amount', 'Source'].map(h => (
+                  {['User', 'Venue', 'Sport', 'Date & Time', 'Status', 'Amount', 'Source', 'Actions'].map(h => (
                     <th key={h} style={{ padding: '10px 12px', fontSize: '0.73rem', color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em' }}>{h}</th>
                   ))}
                 </tr>
@@ -648,7 +669,7 @@ export default function Dashboard() {
                 {recentBookings.map((booking) => {
                   const bDate = new Date(booking.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
                   return (
-                    <tr key={booking._id} style={{ borderBottom: '1px solid rgba(255,255,255,0.025)', fontSize: '0.84rem', transition: 'background 0.2s' }}
+                    <tr key={booking._id} style={{ borderBottom: '1px solid rgba(255,255,255,0.025)', fontSize: '0.84rem', transition: 'background 0.2s', cursor: 'pointer' }}
                       onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.01)'}
                       onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
                       <td style={{ padding: '13px 12px' }}>
@@ -676,10 +697,36 @@ export default function Dashboard() {
                           ? <span style={{ fontSize: '0.72rem', color: '#ec4899', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '4px' }}><Sparkles size={11} /> AI</span>
                           : <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>Manual</span>}
                       </td>
+                      <td style={{ padding: '13px 12px' }}>
+                        <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                          {booking.status !== 'confirmed' && booking.status !== 'completed' && (
+                            <button
+                              onClick={(e) => { e.stopPropagation(); handleUpdateStatus(booking._id, 'confirmed'); }}
+                              className="btn btn-emerald btn-xs"
+                              style={{ cursor: 'pointer' }}
+                            >
+                              Confirm
+                            </button>
+                          )}
+                          {booking.status !== 'cancelled' && booking.status !== 'completed' && (
+                            <button
+                              onClick={(e) => { e.stopPropagation(); handleUpdateStatus(booking._id, 'cancelled'); }}
+                              className="btn btn-danger btn-xs"
+                              style={{ cursor: 'pointer' }}
+                            >
+                              Cancel
+                            </button>
+                          )}
+                          {booking.status === 'completed' && (
+                            <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>Completed</span>
+                          )}
+                        </div>
+                      </td>
                     </tr>
                   );
                 })}
               </tbody>
+
             </table>
           </div>
         )}
