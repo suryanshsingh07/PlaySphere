@@ -22,6 +22,20 @@
 </p>
 
 <p align="center">
+  <a href="https://aiplaysphere.vercel.app/" target="_blank">
+    <img src="https://img.shields.io/badge/Live_Demo-Vercel-000000?style=for-the-badge&logo=vercel&logoColor=white" alt="Vercel Live Demo" />
+  </a>
+  <a href="https://aiplaysphere.netlify.app/" target="_blank">
+    <img src="https://img.shields.io/badge/Live_Demo-Netlify-00C7B7?style=for-the-badge&logo=netlify&logoColor=white" alt="Netlify Live Demo" />
+  </a>
+</p>
+
+<p align="center">
+  🌐 <strong>Vercel Link:</strong> <a href="https://aiplaysphere.vercel.app/">https://aiplaysphere.vercel.app/</a> <br />
+  🌐 <strong>Netlify Link:</strong> <a href="https://aiplaysphere.netlify.app/">https://aiplaysphere.netlify.app/</a>
+</p>
+
+<p align="center">
   <a href="#-problem-statement">Problem</a> •
   <a href="#-solution-overview">Solution</a> •
   <a href="#-architecture">Architecture</a> •
@@ -867,9 +881,9 @@ graph LR
       <br />
       <strong>Shivam Jaiswal</strong>
       <br />
-      <sub>⚙️ Backend Developer</sub>
+      <sub>🎨 Frontend Developer</sub>
       <br />
-      <sub>Express API routes, JWT auth middleware, Socket.IO real-time engine, booking conflict logic</sub>
+      <sub>React UI components, glassmorphism design system, Leaflet map integration, responsive layouts</sub>
     </td>
   </tr>
   <tr>
@@ -880,9 +894,9 @@ graph LR
       <br />
       <strong>Suyash Verma</strong>
       <br />
-      <sub>🎨 Frontend Developer</sub>
+      <sub>⚙️ Backend Developer</sub>
       <br />
-      <sub>React UI components, glassmorphism design system, Leaflet map integration, responsive layouts</sub>
+      <sub>Express API routes, JWT auth middleware, Socket.IO real-time engine, booking conflict logic</sub>
     </td>
     <td align="center" width="250">
       <a href="https://github.com/devvikax">
@@ -924,6 +938,12 @@ graph LR
 ---
 
 ## 🌐 Deployment Guide
+
+### Live Production Links
+
+The production version of the web app is live and fully accessible at:
+- ⚡ **Primary (Vercel):** [https://aiplaysphere.vercel.app/](https://aiplaysphere.vercel.app/)
+- ⚡ **Mirror (Netlify):** [https://aiplaysphere.netlify.app/](https://aiplaysphere.netlify.app/)
 
 ### Frontend — Vercel / Netlify
 

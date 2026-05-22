@@ -79,6 +79,19 @@
       "avatar": "",
       "createdAt": "2026-05-22T15:54:49.192Z",
       "updatedAt": "2026-05-22T15:54:49.192Z"
+    },
+    {
+      "_id": "d31641a5f4836a2f7c73536c",
+      "username": "temp_user_test",
+      "email": "temp@playsphere.in",
+      "password": "$2a$10$myrtu9ytW1HYLw/yDnRO5eaDtAM1YiD0m8d3G46JdTAZs26/t8vV.",
+      "phone": "",
+      "avatar": "",
+      "role": "user",
+      "preferredSports": [],
+      "skillLevel": "intermediate",
+      "createdAt": "2026-05-22T15:59:43.346Z",
+      "updatedAt": "2026-05-22T15:59:43.349Z"
     }
   ],
   "venues": [
