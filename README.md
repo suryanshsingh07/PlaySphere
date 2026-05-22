@@ -941,9 +941,10 @@ graph LR
 
 ### Live Production Links
 
-The production version of the web app is live and fully accessible at:
-- ⚡ **Primary (Vercel):** [https://aiplaysphere.vercel.app/](https://aiplaysphere.vercel.app/)
-- ⚡ **Mirror (Netlify):** [https://aiplaysphere.netlify.app/](https://aiplaysphere.netlify.app/)
+The production version of the app is live and fully accessible at:
+- ⚡ **Primary Frontend (Vercel):** [https://aiplaysphere.vercel.app/](https://aiplaysphere.vercel.app/)
+- ⚡ **Mirror Frontend (Netlify):** [https://aiplaysphere.netlify.app/](https://aiplaysphere.netlify.app/)
+- 🚀 **Live Backend (Render):** [https://playsphere-y1sa.onrender.com](https://playsphere-y1sa.onrender.com)
 
 ### Frontend — Vercel / Netlify
 
@@ -958,7 +959,8 @@ npm run build          # Produces dist/ folder
 
 **Netlify**: Connect your GitHub repo → Set build directory to `frontend/dist` → Build command: `cd frontend && npm run build`.
 
-> ⚠️ Set the environment variable `VITE_API_URL` to your Render backend URL (e.g. `https://playsphere-api.onrender.com`).
+> ⚠️ Set the environment variable `VITE_API_URL` to your Render backend URL (e.g. `https://playsphere-y1sa.onrender.com`).
+
 
 ### Backend — Render
 
