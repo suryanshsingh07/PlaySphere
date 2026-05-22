@@ -30,6 +30,23 @@ export default function Auth() {
     }
   };
 
+  const handleDemoLogin = async (demoEmail, demoPassword) => {
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await axios.post('/api/auth/login', { email: demoEmail, password: demoPassword });
+      if (res.data.success) {
+        login(res.data.data, res.data.data.token);
+        navigate(res.data.data.role === 'venue_owner' ? '/dashboard' : '/');
+      }
+    } catch (err) {
+      console.error(err);
+      setError(err.response?.data?.message || 'Demo login failed.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
@@ -288,14 +305,84 @@ export default function Auth() {
             )}
           </button>
 
-          {/* Demo Credentials Tip */}
-          <div className="glass" style={{ padding: '12px', borderRadius: 'var(--radius-sm)', background: 'rgba(255,255,255,0.01)', border: '1px solid rgba(255,255,255,0.03)' }}>
-            <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-accent)' }}>📋 Demo credentials:</span>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', fontSize: '0.7rem', color: 'var(--text-secondary)', marginTop: '4px' }}>
-              <div>Player: <span style={{ color: '#fff' }}>arjun@playsphere.in</span> / <span style={{ color: '#fff' }}>password123</span></div>
-              <div>Owner: <span style={{ color: '#fff' }}>rahul@playsphere.in</span> / <span style={{ color: '#fff' }}>password123</span></div>
+          {/* One-Click Instant Login (Only in Sign In Mode) */}
+          {isLoginMode && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '6px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <span style={{ height: '1px', flex: 1, background: 'rgba(255, 255, 255, 0.08)' }} />
+                <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-accent)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>One-Click Demo Access</span>
+                <span style={{ height: '1px', flex: 1, background: 'rgba(255, 255, 255, 0.08)' }} />
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                <button
+                  type="button"
+                  onClick={() => handleDemoLogin('arjun@playsphere.in', 'password123')}
+                  className="btn btn-ghost"
+                  disabled={loading}
+                  style={{
+                    padding: '10px',
+                    fontSize: '0.8rem',
+                    border: '1px solid rgba(6, 182, 212, 0.2)',
+                    background: 'rgba(6, 182, 212, 0.03)',
+                    color: '#fff',
+                    borderRadius: 'var(--radius-sm)',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    gap: '4px',
+                    cursor: 'pointer',
+                    transition: 'all 0.3s ease'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.background = 'rgba(6, 182, 212, 0.1)';
+                    e.currentTarget.style.borderColor = 'rgba(6, 182, 212, 0.5)';
+                    e.currentTarget.style.boxShadow = '0 0 10px rgba(6, 182, 212, 0.2)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.background = 'rgba(6, 182, 212, 0.03)';
+                    e.currentTarget.style.borderColor = 'rgba(6, 182, 212, 0.2)';
+                    e.currentTarget.style.boxShadow = 'none';
+                  }}
+                >
+                  <span style={{ fontWeight: 700, color: 'var(--accent-primary)' }}>⚽ Athlete Demo</span>
+                  <span style={{ fontSize: '0.65rem', color: 'var(--text-secondary)' }}>Book Courts</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleDemoLogin('rahul@playsphere.in', 'password123')}
+                  className="btn btn-ghost"
+                  disabled={loading}
+                  style={{
+                    padding: '10px',
+                    fontSize: '0.8rem',
+                    border: '1px solid rgba(139, 92, 246, 0.2)',
+                    background: 'rgba(139, 92, 246, 0.03)',
+                    color: '#fff',
+                    borderRadius: 'var(--radius-sm)',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    gap: '4px',
+                    cursor: 'pointer',
+                    transition: 'all 0.3s ease'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.background = 'rgba(139, 92, 246, 0.1)';
+                    e.currentTarget.style.borderColor = 'rgba(139, 92, 246, 0.5)';
+                    e.currentTarget.style.boxShadow = '0 0 10px rgba(139, 92, 246, 0.2)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.background = 'rgba(139, 92, 246, 0.03)';
+                    e.currentTarget.style.borderColor = 'rgba(139, 92, 246, 0.2)';
+                    e.currentTarget.style.boxShadow = 'none';
+                  }}
+                >
+                  <span style={{ fontWeight: 700, color: '#a78bfa' }}>🏆 Owner Demo</span>
+                  <span style={{ fontSize: '0.65rem', color: 'var(--text-secondary)' }}>Manage Arenas</span>
+                </button>
+              </div>
             </div>
-          </div>
+          )}
         </form>
       </div>
     </div>

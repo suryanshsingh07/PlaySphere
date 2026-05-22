@@ -2,6 +2,7 @@ import React, { useState, useEffect, createContext, useContext } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import Navbar from './components/Navbar';
 import AIChatbot from './components/AIChatbot';
+import Footer from './components/Footer';
 import Home from './pages/Home';
 import Explore from './pages/Explore';
 import VenueDetail from './pages/VenueDetail';
@@ -63,6 +64,7 @@ function App() {
             <Route path="*" element={<Navigate to="/" />} />
           </Routes>
         </main>
+        <Footer />
         {token && <AIChatbot />}
       </div>
     </AuthContext.Provider>

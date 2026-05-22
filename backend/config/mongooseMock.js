@@ -13,6 +13,50 @@ function generateId() {
   return [...Array(24)].map(() => Math.floor(Math.random() * 16).toString(16)).join('');
 }
 
+// Helper to recursively get nested value using a path (e.g. 'sports.name' or 'location.coordinates')
+function getValueByPath(obj, path) {
+  if (!obj) return undefined;
+  const parts = path.split('.');
+  let current = obj;
+  for (let i = 0; i < parts.length; i++) {
+    const part = parts[i];
+    if (Array.isArray(current)) {
+      const remainingPath = parts.slice(i).join('.');
+      const results = current.map(item => getValueByPath(item, remainingPath)).flat();
+      return results.filter(v => v !== undefined);
+    }
+    if (current && typeof current === 'object') {
+      current = current[part];
+    } else {
+      return undefined;
+    }
+  }
+  return current;
+}
+
+// Helper to recursively sanitize data, removing undefined, serializing dates and object IDs
+function sanitizeData(obj) {
+  if (obj === null || obj === undefined) return null;
+  if (obj instanceof Date) return obj.toISOString();
+  if (obj && obj.constructor && obj.constructor.name === 'ObjectIdMock') {
+    return obj.toString();
+  }
+  if (Array.isArray(obj)) {
+    return obj.map(item => sanitizeData(item)).filter(item => item !== undefined);
+  }
+  if (typeof obj === 'object') {
+    const cleaned = {};
+    for (const key in obj) {
+      const val = obj[key];
+      if (val !== undefined) {
+        cleaned[key] = sanitizeData(val);
+      }
+    }
+    return cleaned;
+  }
+  return obj;
+}
+
 // Haversine formula to compute distance in meters between two coordinates
 function getDistance(lat1, lon1, lat2, lon2) {
   const R = 6371e3; // metres
@@ -77,6 +121,49 @@ function initializeFirebase() {
 // Initialize on load
 initializeFirebase();
 
+// ── Mock Mongoose Internal Maps & Helpers ───────────────────
+const registeredModels = {};
+const schemas = {};
+const modelInfo = {
+  users: { modelName: 'User' },
+  venues: { modelName: 'Venue' },
+  bookings: { modelName: 'Booking' },
+  reviews: { modelName: 'Review' }
+};
+
+function applyDefaults(data, fields) {
+  if (!fields) return data;
+  const res = { ...data };
+  for (const key in fields) {
+    const fieldConfig = fields[key];
+    if (fieldConfig && typeof fieldConfig === 'object') {
+      if ('default' in fieldConfig) {
+        if (res[key] === undefined) {
+          let defVal = fieldConfig.default;
+          if (typeof defVal === 'function') {
+            if (defVal === Date) {
+              res[key] = new Date().toISOString();
+            } else if (defVal === String || defVal === Number || defVal === Boolean) {
+              // skip
+            } else {
+              res[key] = defVal();
+            }
+          } else if (Array.isArray(defVal)) {
+            res[key] = [...defVal];
+          } else if (typeof defVal === 'object' && defVal !== null) {
+            res[key] = { ...defVal };
+          } else {
+            res[key] = defVal;
+          }
+        }
+      } else if (!fieldConfig.type && !Array.isArray(fieldConfig)) {
+        res[key] = applyDefaults(res[key] || {}, fieldConfig);
+      }
+    }
+  }
+  return res;
+}
+
 // ── Local Database Operations (if fallback active) ──────────
 function readLocalDb() {
   try {
@@ -111,16 +198,17 @@ async function fetchAll(collectionName) {
 }
 
 async function saveDocument(collectionName, doc) {
-  const docData = { ...doc };
+  const info = modelInfo[collectionName];
+  const schema = info ? schemas[info.modelName] : null;
+  let docData = { ...doc };
+  if (schema && schema.fields) {
+    docData = applyDefaults(docData, schema.fields);
+  }
   const id = docData._id || generateId();
   delete docData._id;
 
-  // Convert Date fields to ISO string / Dates
-  for (const key in docData) {
-    if (docData[key] instanceof Date) {
-      docData[key] = docData[key].toISOString();
-    }
-  }
+  // Sanitize data fully (removes undefined, serializes Dates and ObjectIds to strings)
+  docData = sanitizeData(docData);
 
   if (useLocalDb) {
     const local = readLocalDb();
@@ -224,21 +312,20 @@ function filterInMemory(docs, query) {
         continue;
       }
 
-      // Handle nested sports name query like "sports.name"
-      if (key === 'sports.name' && typeof value === 'string') {
-        const hasSport = doc.sports && doc.sports.some((s) => s.name.toLowerCase() === value.toLowerCase());
-        if (!hasSport) return false;
-        continue;
-      }
+      // Nested / standard query resolution using getValueByPath
+      const docValue = getValueByPath(doc, key);
 
-      // Standard MongoDB operators: $gte, $lte, $in, $regex
-      const docValue = doc[key];
-      if (value && typeof value === 'object' && !(value instanceof Date)) {
+      if (value && typeof value === 'object' && !(value instanceof Date) && !(value && value.constructor && value.constructor.name === 'ObjectIdMock')) {
         if ('$regex' in value) {
           const pattern = value.$regex;
           const options = value.$options || '';
           const regex = new RegExp(pattern, options);
-          if (!regex.test(String(docValue || ''))) return false;
+          const check = (val) => regex.test(String(val || ''));
+          if (Array.isArray(docValue)) {
+            if (!docValue.some(check)) return false;
+          } else {
+            if (!check(docValue)) return false;
+          }
         } else if ('$gte' in value) {
           const val = value.$gte;
           const compareVal = docValue instanceof Date ? docValue : new Date(docValue);
@@ -250,14 +337,31 @@ function filterInMemory(docs, query) {
           const limitVal = val instanceof Date ? val : new Date(val);
           if (compareVal > limitVal) return false;
         } else if ('$in' in value) {
-          const list = value.$in;
-          if (!list.includes(docValue)) return false;
+          const list = value.$in.map(v => v ? v.toString() : '');
+          const check = (val) => list.includes(val ? val.toString() : '');
+          if (Array.isArray(docValue)) {
+            if (!docValue.some(check)) return false;
+          } else {
+            if (!check(docValue)) return false;
+          }
+        } else if ('$ne' in value) {
+          const target = value.$ne ? value.$ne.toString() : '';
+          const currentVal = docValue ? docValue.toString() : '';
+          if (currentVal === target) return false;
         }
       } else {
-        // Direct match (handling Object ID / String string comparison)
-        const strDocVal = docValue ? docValue.toString() : '';
-        const strQueryVal = value ? value.toString() : '';
-        if (strDocVal !== strQueryVal) return false;
+        // Direct match (handling Object ID / String string comparison, and arrays)
+        const strQueryVal = value ? value.toString().toLowerCase() : '';
+        const check = (val) => {
+          const strDocVal = val ? val.toString().toLowerCase() : '';
+          return strDocVal === strQueryVal;
+        };
+
+        if (Array.isArray(docValue)) {
+          if (!docValue.some(check)) return false;
+        } else {
+          if (!check(docValue)) return false;
+        }
       }
     }
     return true;
@@ -271,15 +375,7 @@ function filterInMemory(docs, query) {
   return filtered;
 }
 
-// ── Mock Mongoose Internal Maps & Helpers ───────────────────
-const registeredModels = {};
-const schemas = {};
-const modelInfo = {
-  users: { modelName: 'User' },
-  venues: { modelName: 'Venue' },
-  bookings: { modelName: 'Booking' },
-  reviews: { modelName: 'Review' }
-};
+// Internal maps moved to top
 
 // ── Query Builder class (emulating Mongoose queries) ─────────
 class QueryBuilder {
@@ -383,11 +479,20 @@ class QueryBuilder {
 }
 
 // Wrap plain object with mongoose-like document helper methods
-function wrapDocument(collectionName, plainObj, schema, ModelClass) {
+function wrapDocument(collectionName, plainObj, schema, ModelClass, isNew = false) {
   if (!plainObj) return null;
 
   const doc = { ...plainObj };
   const originalData = { ...plainObj };
+
+  let _isNew = isNew;
+
+  Object.defineProperty(doc, 'isNew', {
+    get() { return _isNew; },
+    set(val) { _isNew = val; },
+    enumerable: false,
+    configurable: true
+  });
 
   // Set constructor to ModelClass
   if (ModelClass) {
@@ -407,6 +512,7 @@ function wrapDocument(collectionName, plainObj, schema, ModelClass) {
   }
 
   doc.isModified = function (path) {
+    if (_isNew && doc[path] !== undefined) return true;
     return doc[path] !== originalData[path];
   };
 
@@ -441,6 +547,11 @@ function wrapDocument(collectionName, plainObj, schema, ModelClass) {
 
     const saved = await saveDocument(collectionName, this.toObject());
     Object.assign(this, saved);
+
+    _isNew = false;
+    for (const key in saved) {
+      originalData[key] = saved[key];
+    }
 
     // Run post save hooks
     if (schema && schema._postHooks && schema._postHooks['save']) {
@@ -546,28 +657,30 @@ function createModel(modelName, schema) {
       if (Array.isArray(data)) {
         const results = [];
         for (const item of data) {
-          const doc = wrapDocument(collectionName, item, schema, ModelClass);
-          if (collectionName === 'users' && doc.password) {
-            const salt = await bcrypt.genSalt(10);
-            doc.password = await bcrypt.hash(doc.password, salt);
-          }
-          const saved = await saveDocument(collectionName, doc.toObject());
-          results.push(wrapDocument(collectionName, saved, schema, ModelClass));
+          const doc = wrapDocument(collectionName, item, schema, ModelClass, true);
+          await doc.save();
+          results.push(doc);
         }
         return results;
       } else {
-        const doc = wrapDocument(collectionName, data, schema, ModelClass);
-        if (collectionName === 'users' && doc.password) {
-          const salt = await bcrypt.genSalt(10);
-          doc.password = await bcrypt.hash(doc.password, salt);
-        }
-        const saved = await saveDocument(collectionName, doc.toObject());
-        return wrapDocument(collectionName, saved, schema, ModelClass);
+        const doc = wrapDocument(collectionName, data, schema, ModelClass, true);
+        await doc.save();
+        return doc;
       }
     },
 
     async insertMany(data) {
-      return await this.create(data);
+      if (Array.isArray(data)) {
+        const results = [];
+        for (const item of data) {
+          const saved = await saveDocument(collectionName, item);
+          results.push(wrapDocument(collectionName, saved, schema, ModelClass, false));
+        }
+        return results;
+      } else {
+        const saved = await saveDocument(collectionName, data);
+        return wrapDocument(collectionName, saved, schema, ModelClass, false);
+      }
     },
 
     async findByIdAndUpdate(id, updateData, options = {}) {
@@ -595,17 +708,13 @@ function createModel(modelName, schema) {
       const docs = await fetchAll(collectionName);
       const values = new Set();
       docs.forEach((doc) => {
-        // Handle nested fields like sports.name
-        if (field.includes('.')) {
-          const parts = field.split('.');
-          const arr = doc[parts[0]];
-          if (Array.isArray(arr)) {
-            arr.forEach((item) => {
-              if (item[parts[1]]) values.add(item[parts[1]]);
-            });
-          }
-        } else {
-          if (doc[field]) values.add(doc[field]);
+        const docVal = getValueByPath(doc, field);
+        if (Array.isArray(docVal)) {
+          docVal.forEach((v) => {
+            if (v !== undefined && v !== null) values.add(v);
+          });
+        } else if (docVal !== undefined && docVal !== null) {
+          values.add(docVal);
         }
       });
       return Array.from(values);
@@ -618,29 +727,35 @@ function createModel(modelName, schema) {
         if (stage.$match) {
           docs = filterInMemory(docs, stage.$match);
         } else if (stage.$group) {
-          const groupKey = stage.$group._id; // string or object
+          const groupKey = stage.$group._id; // string, null, or object
           const groups = {};
 
           docs.forEach((doc) => {
             let keyVal = null;
             if (typeof groupKey === 'string' && groupKey.startsWith('$')) {
               const field = groupKey.slice(1);
-              // Handle monthly groupings
-              if (field === 'month') {
-                // mock month extraction if needed
-              }
-              keyVal = doc[field];
+              keyVal = getValueByPath(doc, field);
             } else if (groupKey && typeof groupKey === 'object') {
               const keys = Object.keys(groupKey);
               if (keys.length > 0) {
-                const subKey = groupKey[keys[0]].slice(1); // e.g. $createdAt
-                if (subKey === 'createdAt' || subKey === 'date') {
-                  const date = new Date(doc[subKey]);
-                  keyVal = date.getMonth() + 1; // Month index 1-12
+                const op = keys[0]; // e.g. "$month" or "$dayOfWeek"
+                const fieldName = groupKey[op].startsWith('$') ? groupKey[op].slice(1) : groupKey[op];
+                const rawVal = getValueByPath(doc, fieldName);
+                if (rawVal) {
+                  const date = new Date(rawVal);
+                  if (op === '$month') {
+                    keyVal = date.getMonth() + 1; // 1-12
+                  } else if (op === '$dayOfWeek') {
+                    keyVal = date.getDay() + 1; // 1-7
+                  } else {
+                    keyVal = rawVal;
+                  }
                 } else {
-                  keyVal = doc[subKey];
+                  keyVal = null;
                 }
               }
+            } else if (groupKey === null || groupKey === undefined) {
+              keyVal = null;
             }
 
             const gId = keyVal !== null && keyVal !== undefined ? keyVal.toString() : 'null';
@@ -667,13 +782,13 @@ function createModel(modelName, schema) {
                   result[key] = group.items.length * sumExpr;
                 } else if (typeof sumExpr === 'string' && sumExpr.startsWith('$')) {
                   const field = sumExpr.slice(1);
-                  result[key] = group.items.reduce((sum, item) => sum + (parseFloat(item[field]) || 0), 0);
+                  result[key] = group.items.reduce((sum, item) => sum + (parseFloat(getValueByPath(item, field)) || 0), 0);
                 }
               } else if (operation.$avg) {
                 const avgExpr = operation.$avg;
                 if (typeof avgExpr === 'string' && avgExpr.startsWith('$')) {
                   const field = avgExpr.slice(1);
-                  const sum = group.items.reduce((s, item) => s + (parseFloat(item[field]) || 0), 0);
+                  const sum = group.items.reduce((s, item) => s + (parseFloat(getValueByPath(item, field)) || 0), 0);
                   result[key] = group.items.length > 0 ? sum / group.items.length : 0;
                 }
               }
@@ -685,12 +800,17 @@ function createModel(modelName, schema) {
           const sortKey = Object.keys(stage.$sort)[0];
           const sortOrder = stage.$sort[sortKey];
           docs.sort((a, b) => {
-            const valA = a[sortKey];
-            const valB = b[sortKey];
+            const valA = getValueByPath(a, sortKey);
+            const valB = getValueByPath(b, sortKey);
             if (valA < valB) return -1 * sortOrder;
             if (valA > valB) return 1 * sortOrder;
             return 0;
           });
+        } else if (stage.$limit) {
+          const limitVal = parseInt(stage.$limit);
+          if (!isNaN(limitVal)) {
+            docs = docs.slice(0, limitVal);
+          }
         }
       }
 
@@ -710,30 +830,45 @@ function createModel(modelName, schema) {
 
 // ── Mock Mongoose API ────────────────────────────────────────
 
+const ObjectIdMock = class {
+  constructor(id) {
+    this.id = id || generateId();
+  }
+  toString() {
+    return this.id;
+  }
+};
+
 const mongooseMock = {
-  Schema: class {
-    constructor(fields, options) {
-      this.fields = fields;
-      this.options = options;
-      this.methods = {};
-      this.statics = {};
-      this._preHooks = {};
-      this._postHooks = {};
-    }
-    index() {}
-    pre(hookName, fn) {
-      if (!this._preHooks[hookName]) this._preHooks[hookName] = [];
-      this._preHooks[hookName].push(fn);
-    }
-    post(hookName, options, fn) {
-      let actualFn = fn;
-      if (typeof options === 'function') {
-        actualFn = options;
+  Schema: (() => {
+    const SchemaClass = class {
+      constructor(fields, options) {
+        this.fields = fields;
+        this.options = options;
+        this.methods = {};
+        this.statics = {};
+        this._preHooks = {};
+        this._postHooks = {};
       }
-      if (!this._postHooks[hookName]) this._postHooks[hookName] = [];
-      this._postHooks[hookName].push(actualFn);
-    }
-  },
+      index() {}
+      pre(hookName, fn) {
+        if (!this._preHooks[hookName]) this._preHooks[hookName] = [];
+        this._preHooks[hookName].push(fn);
+      }
+      post(hookName, options, fn) {
+        let actualFn = fn;
+        if (typeof options === 'function') {
+          actualFn = options;
+        }
+        if (!this._postHooks[hookName]) this._postHooks[hookName] = [];
+        this._postHooks[hookName].push(actualFn);
+      }
+    };
+    SchemaClass.Types = {
+      ObjectId: ObjectIdMock
+    };
+    return SchemaClass;
+  })(),
 
   model(name, schema) {
     if (!schema) {
@@ -750,14 +885,7 @@ const mongooseMock = {
   },
 
   Types: {
-    ObjectId: class {
-      constructor(id) {
-        this.id = id || generateId();
-      }
-      toString() {
-        return this.id;
-      }
-    },
+    ObjectId: ObjectIdMock,
   },
 };
 
