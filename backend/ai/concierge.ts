@@ -1,295 +1,387 @@
-// AI Concierge - Grounded LLM Integration
+import { getApprovedVenues, getLandmarks, getInfrastructure, getVenueBookings } from '@/backend/firebase/firestore';
+import { callLLM, ChatMessage } from '@/backend/ai/llm';
+import { rankVenues, RankingCriteria } from './ranking';
+import { generateTimeSlots } from '@/shared/helpers/pricing';
 
-import Groq from 'groq-sdk';
-import { SUPPORTED_SPORTS, LUCKNOW_NEIGHBORHOODS } from '@/shared/constants';
-import { calculateDistance } from '@/shared/helpers';
+export async function handleConciergeRequest(
+  message: string,
+  history: { role: string; content: string }[],
+  mode: 'discovery' | 'guidance' = 'discovery'
+) {
+  // ── LIVE FIRESTORE RETRIEVAL ───────────────────────────────────────────
+  const liveVenues = await getApprovedVenues().catch(() => []);
+  const landmarks = await getLandmarks().catch(() => []);
+  const infra = await getInfrastructure().catch(() => []);
 
-const groq = new Groq({
-  apiKey: process.env.LLM_API_KEY,
-});
+  // If in GUIDANCE MODE, run standard guidance chat
+  if (mode === 'guidance') {
+    const venueNames = liveVenues.map((v) => v.name).join(', ');
+    const systemPrompt = `You are PlaySphere AI (Guidance Mode) — a sports rules and gear advisor for Lucknow, India.
+Your focus is to provide lightweight sports tips, basic rules, workout timing advice, and beginner suggestions.
+- Keep it lightweight. Do NOT create coaching programs, act as a health advisor, medical consultant, or life assistant.
+- Provide simple rules, gear tips, warm-up habits, and suggestions on the best timing to book slots to save money (afternoon slots are 15% cheaper).
+- You can mention that these venues are available in Lucknow if relevant: ${venueNames || 'None yet'}. Never invent any other sports venues.
+- All prices are in Indian Rupees (₹).
+- Start with a brief friendly sports greeting (E.g. "Hi! I'm PlaySphere AI (Guidance Mode) 🏸").`;
 
-export interface ConciergeContext {
-  availableVenues: Array<{
-    id: string;
-    name: string;
-    area: string;
-    sport: string;
-    price: number;
-    rating: number;
-    coordinates: { latitude: number; longitude: number };
-  }>;
-  userLocation?: { latitude: number; longitude: number };
-}
-
-export interface ConciergeResponse {
-  text: string;
-  recommendations: Array<{
-    venueId: string;
-    venueName: string;
-    sport: string;
-    price: number;
-    distance?: number;
-    score: number;
-  }>;
-  bookingPrefill?: {
-    venueId: string;
-    date: string;
-    time: string;
-    sport: string;
-  };
-}
-
-/**
- * Main AI Concierge handler with grounding
- */
-export async function processUserQuery(
-  userMessage: string,
-  context: ConciergeContext
-): Promise<ConciergeResponse> {
-  // Step 1: Extract intent and parameters from user message
-  const intent = extractIntent(userMessage);
-
-  // Step 2: If it's a discovery/booking query, apply proximity boost and construct facts
-  let factsPrompt = '';
-  if (intent.type === 'discovery' || intent.type === 'booking') {
-    const rankedVenues = rankVenuesByProximity(context.availableVenues, intent, context.userLocation);
-    factsPrompt = buildFactsPrompt(rankedVenues);
+    const messages: ChatMessage[] = [
+      { role: 'system', content: systemPrompt }
+    ];
+    if (history && Array.isArray(history)) {
+      history.forEach((msg) => {
+        messages.push({
+          role: msg.role === 'assistant' ? 'assistant' : 'user',
+          content: msg.content
+        });
+      });
+    }
+    messages.push({ role: 'user', content: message });
+    const responseText = await callLLM(messages);
+    return { response: responseText, text: responseText, cards: [] };
   }
 
-  // Step 3: Build system and user prompts with grounding
-  const systemPrompt = buildSystemPrompt(intent, factsPrompt);
-  const userPrompt = buildUserPrompt(userMessage, intent);
+  // ── DISCOVERY/AGENTIC MODE: TWO-PASS WORKFLOW ───────────────────────────
+  const todayStr = new Date().toISOString().split('T')[0];
+  
+  // Pass 1: Parse intent from user message
+  const extractionPrompt = `You are an agentic query parsing assistant. Analyze the user's sports query and extract search parameters in Lucknow.
+Return ONLY a valid JSON object matching the schema below. Do not wrap the JSON in markdown code blocks or add any other text.
+Schema:
+{
+  "sport": string | null,
+  "location": string | null,
+  "landmark": string | null,
+  "venueName": string | null,
+  "maxPrice": number | null,
+  "skillLevel": string | null,
+  "preferredTime": "morning" | "afternoon" | "evening" | null,
+  "compareMode": boolean,
+  "timeSlot": string | null,
+  "bookingIntent": boolean,
+  "bookingDate": string | null,
+  "bookingSlot": string | null
+}
+
+Examples:
+Query: "Beginner badminton under 300 near Lohia Park tomorrow evening"
+JSON: {
+  "sport": "badminton",
+  "location": "Gomti Nagar",
+  "landmark": "Lohia Park",
+  "venueName": null,
+  "maxPrice": 300,
+  "skillLevel": "beginner",
+  "preferredTime": "evening",
+  "compareMode": false,
+  "timeSlot": "tomorrow evening",
+  "bookingIntent": false,
+  "bookingDate": null,
+  "bookingSlot": null
+}
+
+Query: "I want to book a football turf in Chinhat tomorrow at 6 PM"
+JSON: {
+  "sport": "football",
+  "location": "Chinhat",
+  "landmark": null,
+  "venueName": null,
+  "maxPrice": null,
+  "skillLevel": null,
+  "preferredTime": "evening",
+  "compareMode": false,
+  "timeSlot": "tomorrow at 6 PM",
+  "bookingIntent": true,
+  "bookingDate": "${new Date(Date.now() + 24 * 3600 * 1000).toISOString().split('T')[0]}",
+  "bookingSlot": "18:00–19:00"
+}
+
+Query: "Book Lohia Park Sports Area tomorrow at 11 AM"
+JSON: {
+  "sport": "badminton",
+  "location": "Gomti Nagar",
+  "landmark": "Lohia Park",
+  "venueName": "Lohia Park Sports Area",
+  "maxPrice": null,
+  "skillLevel": null,
+  "preferredTime": null,
+  "compareMode": false,
+  "timeSlot": "tomorrow at 11 AM",
+  "bookingIntent": true,
+  "bookingDate": "${new Date(Date.now() + 24 * 3600 * 1000).toISOString().split('T')[0]}",
+  "bookingSlot": "11:00–12:00"
+}
+
+User query: "${message}"
+Today's date is: ${todayStr} (use this to resolve relative bookingDates like 'tomorrow', 'today', 'day after tomorrow', etc. to YYYY-MM-DD format).
+JSON:`;
+
+  let criteria: RankingCriteria = {};
+  let isCompareMode = false;
+  let timeSlotStr = '';
+  let parsed: any = {};
 
   try {
-    // Step 4: Call Groq LLM
-    const response = await groq.messages.create({
-      model: process.env.LLM_MODEL || 'llama3-8b-8192',
-      max_tokens: 1024,
-      messages: [
-        {
-          role: 'user',
-          content: systemPrompt + '\n\n' + userPrompt,
-        },
-      ],
-    });
+    const rawExtraction = await callLLM([
+      { role: 'system', content: 'You parse queries to JSON.' },
+      { role: 'user', content: extractionPrompt }
+    ], { temperature: 0.1 });
 
-    const aiResponse = response.content[0].type === 'text' ? response.content[0].text : '';
-
-    // Step 5: Parse LLM response and extract JSON structures
-    const { recommendations, bookingPrefill } = extractStructuredData(aiResponse, intent);
-
-    return {
-      text: aiResponse,
-      recommendations,
-      bookingPrefill,
+    const cleanedJson = rawExtraction.replace(/```json/g, '').replace(/```/g, '').trim();
+    parsed = JSON.parse(cleanedJson);
+    
+    criteria = {
+      sport: parsed.sport || undefined,
+      area: parsed.location || undefined,
+      maxPrice: parsed.maxPrice || undefined,
+      skillLevel: parsed.skillLevel || undefined,
+      preferredTime: parsed.preferredTime || undefined,
+      venueName: parsed.venueName || undefined,
     };
-  } catch (error) {
-    console.error('Groq API error:', error);
-    throw new Error('Failed to process user query');
-  }
-}
+    isCompareMode = !!parsed.compareMode;
+    timeSlotStr = parsed.timeSlot || '';
 
-interface IntentData {
-  type: 'discovery' | 'booking' | 'guidance' | 'schedule' | 'help';
-  sport?: string;
-  area?: string;
-  budget?: number;
-  date?: string;
-  time?: string;
-}
+    // If landmark is specified, resolve it to coordinates and area
+    if (parsed.landmark && landmarks.length > 0) {
+      const matchedLandmark = landmarks.find(
+        (l) => l.name.toLowerCase().includes(parsed.landmark.toLowerCase()) ||
+               parsed.landmark.toLowerCase().includes(l.name.toLowerCase())
+      );
+      if (matchedLandmark) {
+        criteria.nearLandmark = matchedLandmark.name;
+        criteria.area = matchedLandmark.area; // Overwrite area with landmark's area
+      }
+    }
 
-function extractIntent(message: string): IntentData {
-  const lowerMsg = message.toLowerCase();
-
-  // Detect sport
-  let sport: string | undefined;
-  for (const s of SUPPORTED_SPORTS) {
-    if (lowerMsg.includes(s.replace('_', ' '))) {
-      sport = s;
-      break;
+    // Direct landmark fallback resolution to Gomti Nagar for Lohia Park/Janeshwar Mishra Park if not matched
+    if (parsed.landmark && !criteria.area) {
+      const lm = parsed.landmark.toLowerCase();
+      if (lm.includes('lohia') || lm.includes('janeshwar')) {
+        criteria.nearLandmark = parsed.landmark;
+        criteria.area = 'Gomti Nagar';
+      }
+    }
+  } catch (err) {
+    console.error('Intent extraction failed, falling back to heuristic parsing:', err);
+    // Heuristic fallbacks
+    const lowerMsg = message.toLowerCase();
+    if (lowerMsg.includes('badminton')) criteria.sport = 'badminton';
+    if (lowerMsg.includes('football')) criteria.sport = 'football';
+    if (lowerMsg.includes('swimming')) criteria.sport = 'swimming';
+    if (lowerMsg.includes('kabaddi')) criteria.sport = 'kabaddi';
+    if (lowerMsg.includes('gomti')) criteria.area = 'Gomti Nagar';
+    if (lowerMsg.includes('chinhat')) criteria.area = 'Chinhat';
+    if (lowerMsg.includes('aliganj')) criteria.area = 'Aliganj';
+    if (lowerMsg.includes('hazratganj')) criteria.area = 'Hazratganj';
+    if (lowerMsg.includes('beginner')) criteria.skillLevel = 'beginner';
+    if (lowerMsg.includes('advanced')) criteria.skillLevel = 'advanced';
+    if (lowerMsg.includes('compare')) isCompareMode = true;
+    if (lowerMsg.includes('lohia')) {
+      criteria.area = 'Gomti Nagar';
+      criteria.nearLandmark = 'Lohia Park';
+    } else if (lowerMsg.includes('janeshwar')) {
+      criteria.area = 'Gomti Nagar';
+      criteria.nearLandmark = 'Janeshwar Mishra Park';
     }
   }
 
-  // Detect area
-  let area: string | undefined;
-  for (const neighborhood of LUCKNOW_NEIGHBORHOODS) {
-    if (lowerMsg.includes(neighborhood.toLowerCase())) {
-      area = neighborhood;
-      break;
-    }
+  // Merge live marketplace venues and infrastructure for discovery
+  const activeVenueCodes = new Set(liveVenues.map((v) => v.venueCode).filter(Boolean));
+
+  const mappedInfra = infra
+    .filter((i) => !i.venueCode || !activeVenueCodes.has(i.venueCode))
+    .map((i) => ({
+      id: i.id,
+      name: i.name,
+      sport: i.sport as any,
+      area: i.area,
+      address: `${i.name}, ${i.area}`,
+      coordinates: i.coordinates,
+      price: 0,
+      rating: i.rating || 0,
+      reviewCount: i.reviewCount || 0,
+      amenities: i.amenities || [],
+      skillLevel: 'all' as any,
+      timings: { open: '00:00', close: '00:00' },
+      description: i.description || '',
+      imageUrl: i.imageUrl || 'https://images.unsplash.com/photo-1626224583764-f87db24ac4ea?w=800',
+      category: 'infrastructure',
+      available: false,
+      ownerId: i.ownerId || 'system',
+      source: i.source as any,
+      approvalStatus: 'approved' as any,
+      peakPricing: { morning: 0, afternoon: 0, evening: 0 },
+      ownerLinked: i.ownerLinked ?? false,
+      ownershipStatus: i.ownershipStatus ?? null,
+      venueCode: i.venueCode
+    }));
+
+  const allSearchable = [...liveVenues, ...mappedInfra];
+
+  // Filter venues by sport first (if requested) to keep search focused
+  let filteredVenues = allSearchable;
+  if (criteria.sport) {
+    filteredVenues = allSearchable.filter((v) => v.sport.toLowerCase() === criteria.sport?.toLowerCase());
   }
 
-  // Detect budget (extract numbers followed by rupees/rs/₹)
-  let budget: number | undefined;
-  const budgetMatch = message.match(/[₹rs\s]+(\d+)/i);
-  if (budgetMatch) {
-    budget = parseInt(budgetMatch[1]);
-  }
+  // Rank the filtered venues based on criteria
+  const ranked = rankVenues(filteredVenues, criteria);
 
-  // Detect time patterns
-  let time: string | undefined;
-  if (lowerMsg.includes('morning') || lowerMsg.includes('6') || lowerMsg.includes('7') || lowerMsg.includes('8')) {
-    time = 'morning';
-  } else if (
-    lowerMsg.includes('afternoon') ||
-    lowerMsg.includes('12') ||
-    lowerMsg.includes('1') ||
-    lowerMsg.includes('2') ||
-    lowerMsg.includes('3')
-  ) {
-    time = 'afternoon';
-  } else if (
-    lowerMsg.includes('evening') ||
-    lowerMsg.includes('night') ||
-    lowerMsg.includes('6') ||
-    lowerMsg.includes('7') ||
-    lowerMsg.includes('8')
-  ) {
-    time = 'evening';
-  }
+  // ── PREFILL AGENTIC BOOKING ACTION ──────────────────────────────────────
+  let bookingAction: any = null;
+  if (parsed.bookingIntent && liveVenues.length > 0) {
+    // Filter only bookable marketplace venues (which have category !== 'infrastructure')
+    const bookableFiltered = criteria.sport
+      ? liveVenues.filter((v) => v.sport.toLowerCase() === criteria.sport?.toLowerCase())
+      : liveVenues;
 
-  // Determine intent type
-  let type: IntentData['type'] = 'help';
-  if (
-    lowerMsg.includes('find') ||
-    lowerMsg.includes('search') ||
-    lowerMsg.includes('looking for') ||
-    lowerMsg.includes('where')
-  ) {
-    type = 'discovery';
-  } else if (lowerMsg.includes('book') || lowerMsg.includes('reserve') || lowerMsg.includes('book now')) {
-    type = 'booking';
-  } else if (lowerMsg.includes('rules') || lowerMsg.includes('gear') || lowerMsg.includes('tips')) {
-    type = 'guidance';
-  } else if (lowerMsg.includes('my bookings') || lowerMsg.includes('bookings') || lowerMsg.includes('schedule')) {
-    type = 'schedule';
-  }
+    const rankedBookables = rankVenues(bookableFiltered, criteria);
+    if (rankedBookables.length > 0) {
+      const targetVenue = rankedBookables[0].venue;
+      const targetDate = parsed.bookingDate || todayStr;
 
-  return { type, sport, area, budget, time };
-}
-
-function rankVenuesByProximity(
-  venues: ConciergeContext['availableVenues'],
-  intent: IntentData,
-  userLocation?: ConciergeContext['userLocation']
-) {
-  return venues
-    .map(venue => {
-      let score = venue.rating * 20; // Base rating score
-
-      // Sport match boost
-      if (intent.sport && venue.sport.toLowerCase().includes(intent.sport.toLowerCase())) {
-        score += 50;
-      }
-
-      // Area match boost
-      if (intent.area && venue.area.includes(intent.area)) {
-        score += 40;
-      }
-
-      // Budget match boost
-      if (intent.budget && venue.price <= intent.budget) {
-        score += 30;
-      } else if (intent.budget) {
-        score -= 20; // Penalty for exceeding budget
-      }
-
-      // Proximity boost (if user location provided)
-      let distance: number | undefined;
-      if (userLocation) {
-        distance = calculateDistance(
-          userLocation.latitude,
-          userLocation.longitude,
-          venue.coordinates.latitude,
-          venue.coordinates.longitude
+      try {
+        const bookings = await getVenueBookings(targetVenue.id, targetDate);
+        const slots = generateTimeSlots(
+          targetVenue.timings.open,
+          targetVenue.timings.close,
+          targetVenue.price,
+          targetDate
         );
-        score += Math.max(0, 50 - distance * 5); // Closer = higher score
+
+        // Filter out already booked slots
+        const bookedSlotLabels = new Set(bookings.map((b) => b.slot));
+        const availableSlots = slots.filter((s) => !bookedSlotLabels.has(s.label));
+
+        // Match preferred slot
+        let selectedSlot = null;
+        if (parsed.bookingSlot) {
+          const cleanSlot = parsed.bookingSlot.replace(/\s+/g, '').toLowerCase();
+          selectedSlot = availableSlots.find((s) => {
+            const cleanLabel = s.label.replace(/\s+/g, '').toLowerCase();
+            return cleanLabel.includes(cleanSlot) || cleanSlot.includes(cleanLabel) || s.time.includes(cleanSlot);
+          });
+        }
+
+        if (!selectedSlot && criteria.preferredTime) {
+          selectedSlot = availableSlots.find((s) => s.timeOfDay === criteria.preferredTime);
+        }
+
+        if (!selectedSlot) {
+          selectedSlot = availableSlots[0];
+        }
+
+        if (selectedSlot) {
+          bookingAction = {
+            type: 'book',
+            venueId: targetVenue.id,
+            venueName: targetVenue.name,
+            date: targetDate,
+            slot: selectedSlot.label,
+          };
+        }
+      } catch (err) {
+        console.error('Error checking availability for agentic action:', err);
       }
-
-      return { ...venue, score, distance };
-    })
-    .sort((a, b) => b.score - a.score)
-    .slice(0, 5); // Top 5 venues
-}
-
-function buildFactsPrompt(rankedVenues: ReturnType<typeof rankVenuesByProximity>): string {
-  const venuesList = rankedVenues
-    .map((v, idx) => `${idx + 1}. ${v.name} (${v.area}) - ${v.sport}, ₹${v.price}/hour, Rating: ${v.rating}/5`)
-    .join('\n');
-
-  return `
-AVAILABLE VENUES IN LUCKNOW (Ranked by relevance):
-${venuesList}
-
-These are the ONLY venues available that match the search criteria. Do NOT suggest any other venues.
-`;
-}
-
-function buildSystemPrompt(intent: IntentData, factsPrompt: string): string {
-  if (intent.type === 'guidance') {
-    return `You are PlaySphere AI, a sports knowledge assistant. You provide helpful tips, equipment recommendations, and sports rules ONLY. Do NOT recommend venues or make bookings. If asked about venues, politely redirect to the discovery feature.`;
-  }
-
-  if (intent.type === 'discovery' || intent.type === 'booking') {
-    return `You are PlaySphere AI, a grounded sports venue assistant for Lucknow. Your responses are strictly based on the venues provided below. 
-
-${factsPrompt}
-
-Rules:
-1. Only recommend venues from the list above
-2. If no suitable venue exists, say "Unfortunately, no venues match your criteria"
-3. For booking requests, provide a structured JSON block: {"venueId": "...", "date": "...", "time": "...", "sport": "..."}
-4. Include distance if available
-5. Be conversational and helpful`;
-  }
-
-  return `You are PlaySphere AI, a helpful sports venue assistant. Respond naturally to user queries about sports infrastructure discovery and booking in Lucknow.`;
-}
-
-function buildUserPrompt(message: string, intent: IntentData): string {
-  let prompt = message;
-
-  if (intent.type === 'discovery') {
-    prompt += '\n\nBased on the venues provided, recommend the best match(es) for my query.';
-  } else if (intent.type === 'booking') {
-    prompt += '\n\nIf a suitable venue is found, provide booking details in JSON format.';
-  }
-
-  return prompt;
-}
-
-function extractStructuredData(
-  aiResponse: string,
-  intent: IntentData
-): { recommendations: ConciergeResponse['recommendations']; bookingPrefill?: ConciergeResponse['bookingPrefill'] } {
-  const recommendations: ConciergeResponse['recommendations'] = [];
-
-  // Try to extract JSON prefill data
-  const jsonMatch = aiResponse.match(/\{[^{}]*"venueId"[^{}]*\}/);
-  let bookingPrefill: ConciergeResponse['bookingPrefill'] | undefined;
-
-  if (jsonMatch) {
-    try {
-      bookingPrefill = JSON.parse(jsonMatch[0]);
-    } catch (e) {
-      console.error('Failed to parse booking prefill JSON');
     }
   }
 
-  // Extract venue recommendations from text
-  const venueMatches = aiResponse.match(/\d+\.\s+([A-Z][^,]+),/g);
-  if (venueMatches) {
-    venueMatches.forEach((match, idx) => {
-      const venueName = match.replace(/^\d+\.\s+/, '').replace(/,\s*$/, '');
-      recommendations.push({
-        venueId: `venue_${idx}`,
-        venueName,
-        sport: intent.sport || 'various',
-        price: 400, // Default estimate
-        score: 100 - idx * 10,
+  // Programmatically handle Smart Compare Mode
+  let comparisonTable = '';
+  if (isCompareMode && ranked.length > 0) {
+    comparisonTable = `\n\n### 📊 Structured Comparison Matrix:\n| Venue Name | Location / Area | Type | Base Price | Rating |\n| :--- | :--- | :--- | :--- | :--- |\n`;
+    ranked.slice(0, 3).forEach((r) => {
+      const isInf = r.venue.category === 'infrastructure';
+      comparisonTable += `| **${r.venue.name}** | ${r.venue.area} | ${isInf ? '🏛️ Mapped Infra' : '🎫 Bookable Venue'} | ${isInf ? 'N/A' : `₹${r.venue.price}/hr`} | ${isInf ? 'N/A' : `${r.venue.rating}★`} |\n`;
+    });
+  }
+
+  // Programmatically handle Slot Recommendation Insights
+  let slotRecommendation = '';
+  if (ranked.length > 0) {
+    const topVenue = ranked[0].venue;
+    const peak = topVenue.peakPricing;
+    if (peak && topVenue.category !== 'infrastructure') {
+      slotRecommendation = `\n\n### ⏱️ Slot Availability & Smart Pricing Recommendation for ${topVenue.name}:\n`;
+      slotRecommendation += `- **Best Value (Afternoon)**: ₹${peak.afternoon}/hr (11 AM - 4 PM) [15% Off discount applied]\n`;
+      slotRecommendation += `- **Standard (Morning)**: ₹${peak.morning}/hr (5 AM - 8 AM)\n`;
+      slotRecommendation += `- **Peak Premium (Evening)**: ₹${peak.evening}/hr (5 PM - 10 PM) [30% peak fee applied]\n`;
+      slotRecommendation += `Recommendation: If booking ${timeSlotStr || 'soon'}, prefer the Afternoon slot to save money!`;
+    }
+  }
+
+  // Assemble facts and final LLM system prompt
+  const rankedFacts = ranked.slice(0, 3).map((r, index) => {
+    const isInf = r.venue.category === 'infrastructure';
+    return `${index + 1}. **${r.venue.name}** (Score: ${r.score}/100) [${isInf ? '🏛️ Mapped Infrastructure - Booking Unavailable' : '🎫 Marketplace Venue - Bookable'}] -> ${r.explanation}`;
+  }).join('\n');
+
+  let systemPrompt = `You are PlaySphere AI (Discovery Mode) — an expert agentic sports concierge for Lucknow, India.
+Your objective is to provide venue search, comparisons, slot recommendations, and booking assistance.
+- You have parsed the user's intent and calculated weighted matching scores for the top venues in real-time.
+- You must explain recommendations using the calculated matching scores (E.g. "This facility scored 95/100 because...") instead of fabricating reasoning.
+- Provide clear next steps using internal paths (e.g. /venues/[id]) and interactive venue cards rendering below.
+- Do NOT output any Google Maps links, raw coordinates, or external navigation links. PlaySphere AI maintains a fully self-contained experience. Inform the user they can use the interactive cards or interactive map on this page to view details, verify ownership, or complete bookings.
+
+### Real-Time Grounded Matches:
+${rankedFacts || 'No matching active venues found in Lucknow matching those criteria.'}
+${comparisonTable}
+${slotRecommendation}
+
+STRICT GROUNDING RULES:
+1. Recommend ONLY the venues listed in the facts above. If the list is empty, state that honestly.
+2. Incorporate the computed matching scores and peak pricing recommendation in your response.
+3. Keep your response structured, recruiter-friendly, and concise. All prices are in Indian Rupees (₹).
+4. Do not invent any other venues. Lucknow areas include: Gomti Nagar, Chinhat, Aliganj, Hazratganj, Indira Nagar, Chowk.
+5. NEVER Suggest or output Google Maps links, coordinates, or any external navigation links. Guide the user to the interactive cards displayed on their screen instead.`;
+
+  if (bookingAction) {
+    systemPrompt += `\n\n### ⚡ PREFILLED BOOKING ACTION ACTIVE:
+The user explicitly wants to book. We have verified availability and prefilled this action:
+- Venue: ${bookingAction.venueName} (ID: ${bookingAction.venueId})
+- Date: ${bookingAction.date}
+- Slot: ${bookingAction.slot}
+
+You MUST inform the user that you have found and pre-selected this slot for them, state the price, and tell them they can click the "Continue Booking" button below to pre-fill their booking details for manual confirmation on the booking page. Explain why this venue is the best match.`;
+  }
+
+  const messages: ChatMessage[] = [
+    { role: 'system', content: systemPrompt }
+  ];
+
+  if (history && Array.isArray(history)) {
+    history.forEach((msg) => {
+      messages.push({
+        role: msg.role === 'assistant' ? 'assistant' : 'user',
+        content: msg.content
       });
     });
   }
 
-  return { recommendations, bookingPrefill };
+  const cards = ranked.slice(0, 3).map((r) => {
+    const isInf = r.venue.category === 'infrastructure';
+    return {
+      venueId: r.venue.id,
+      title: r.venue.name,
+      sport: r.venue.sport,
+      area: r.venue.area,
+      imageUrl: r.venue.imageUrl,
+      rating: isInf ? undefined : r.venue.rating,
+      price: isInf ? undefined : r.venue.price,
+      venueType: (isInf ? 'infrastructure' : 'marketplace') as 'marketplace' | 'infrastructure',
+      venueCode: r.venue.venueCode,
+      action: (isInf 
+        ? (r.venue.ownershipStatus === 'approved' ? 'view' : 'verify') 
+        : 'book') as 'book' | 'view' | 'verify',
+    };
+  });
+
+  messages.push({ role: 'user', content: message });
+  const responseText = await callLLM(messages);
+
+  return {
+    response: responseText,
+    text: responseText,
+    action: bookingAction || undefined,
+    cards: cards
+  };
 }

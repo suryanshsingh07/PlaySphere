@@ -1,57 +1,62 @@
 # Dependencies
 node_modules/
-.pnp
-.pnp.js
+/.pnp
+.pnp.*
+.yarn/*
+!.yarn/patches
+!.yarn/plugins
+!.yarn/releases
+!.yarn/versions
 
-# Environment variables
+# Environment & Secrets
 .env
 .env.local
-.env.development.local
-.env.test.local
-.env.production.local
+.env.*.local
+.env.development
+.env.production
+*.env
+*.pem
+**/next-env.d.ts
 
-# Build outputs
+# Firebase / Credentials
+serviceAccountKey.json
+firebase-adminsdk*.json
+firebase-debug.log
+firebase-export*
+
+# Node / Next.js
+.next/
+/out/
 dist/
-build/
-out/
+/build
+/coverage/
 
-# Logs
+# Logs & Runtime
+*.log
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+.pnpm-debug.log*
 pnpm-debug.log*
+tmp/
+temp/
 
-# IDE
-.vscode/
-.idea/
-*.swp
-*.swo
-*~
+# IDE / OS
 .DS_Store
 Thumbs.db
+.vscode/
+.idea/
 
-# OS
-.DS_Store
-.DS_Store?
-._*
-.Spotlight-V100
-.Trashes
-ehthumbs.db
+# Testing / Automation Artifacts
+playwright-report/
+test-results/
+screenshots/
+videos/
+traces/
 
-# Python
-__pycache__/
-*.py[cod]
-*$py.class
-venv/
-.venv/
-*.egg-info/
-
-# Testing
-coverage/
-.nyc_output/
-
-# Misc
-*.log
+# Local / Generated Files
 *.tmp
-*.temp
+*.cache
 .cache/
+.vercel
+*.tsbuildinfo

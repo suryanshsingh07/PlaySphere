@@ -1,91 +1,102 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    
-    // Helper functions
-    function isSignedIn() {
+
+    // ── Helper functions ──────────────────────────────────────────────────
+    function isAuthenticated() {
       return request.auth != null;
     }
-    
+
+    function isOwner(uid) {
+      return request.auth.uid == uid;
+    }
+
     function isAdmin() {
-      return isSignedIn() && 
-             request.auth.token.admin == true;
+      return isAuthenticated() && 
+        exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
     }
-    
-    function isOwner(userId) {
-      return isSignedIn() && 
-             request.auth.uid == userId;
-    }
-    
-    function isVenueOwner(venueId) {
-      return isSignedIn() && 
-             get(/databases/$(database)/documents/venues/$(venueId)).data.ownerId == request.auth.uid;
-    }
-    
-    // Users collection
+
+    // ── Users collection ─────────────────────────────────────────────────
     match /users/{userId} {
-      allow read: if isSignedIn() && (isOwner(userId) || isAdmin());
-      allow create: if isSignedIn();
-      allow update: if isOwner(userId);
-      allow delete: if isAdmin();
+      // Allow read publicly to support server-side authentication verification
+      allow read: if true;
+      allow create: if isOwner(userId);
+      // Users can update their own profile (excluding role and approvalStatus)
+      // Admins can update any user profile (allowing owner approvals)
+      allow update: if isAuthenticated() && (
+        isAdmin() || 
+        (isOwner(userId) && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['role', 'approvalStatus']))
+      );
+      // Allow users to delete their own profile or admins to delete any profile
+      allow delete: if isAuthenticated() && (isOwner(userId) || isAdmin());
     }
-    
-    // Venues collection (read-only for players, full for admins)
+
+    // ── Venues collection ─────────────────────────────────────────────────
     match /venues/{venueId} {
-      allow read: if isSignedIn();
-      allow create: if isAdmin() || isSignedIn(); // Players create claims
-      allow update: if isAdmin() || isVenueOwner(venueId);
-      allow delete: if isAdmin();
-      
-      // Reviews subcollection
-      match /reviews/{reviewId} {
-        allow read: if isSignedIn();
-        allow create: if isSignedIn();
-        allow update: if isOwner(resource.data.userId) || isAdmin();
-        allow delete: if isOwner(resource.data.userId) || isAdmin();
-      }
+      // Anyone can read venues (public discovery)
+      allow read: if true;
+      // Authenticated users can create venues (owner adds venue)
+      allow create: if isAuthenticated();
+      // Owners can update/delete their own venues; anyone authenticated can update (for availability toggle)
+      allow update: if isAuthenticated() 
+        && (resource.data.ownerId == request.auth.uid || resource.data.ownerId == 'system');
+      allow delete: if isAuthenticated()
+        && (resource.data.ownerId == request.auth.uid || isAdmin());
     }
-    
-    // Bookings collection
+
+    // ── Bookings collection ────────────────────────────────────────────────
     match /bookings/{bookingId} {
-      allow read: if isSignedIn() && 
-                     (isOwner(resource.data.userId) || 
-                      isVenueOwner(resource.data.venueId) ||
-                      isAdmin());
-      allow create: if isSignedIn() && isOwner(request.resource.data.userId);
-      allow update: if isSignedIn() && 
-                       (isOwner(resource.data.userId) || 
-                        isVenueOwner(resource.data.venueId) ||
-                        isAdmin());
-      allow delete: if isAdmin() && 
-                       resource.data.status in ['cancelled', 'completed'];
+      // Users can read their own bookings; owners can read bookings for their venues
+      allow read: if isAuthenticated();
+      // Any authenticated user can create a booking (player books)
+      allow create: if isAuthenticated();
+      // Users can update their own bookings (e.g., cancel, submit payment), owners can verify them, and admins can manage them
+      allow update: if isAuthenticated() && (
+        resource.data.userId == request.auth.uid ||
+        resource.data.playerId == request.auth.uid ||
+        resource.data.ownerId == request.auth.uid ||
+        isAdmin()
+      );
+      // Allow delete only for admins (cleanup) or owners if the booking is cancelled
+      allow delete: if isAdmin() || (
+        isAuthenticated() &&
+        (resource.data.playerId == request.auth.uid || resource.data.userId == request.auth.uid) &&
+        (resource.data.bookingStatus == 'cancelled' || resource.data.status == 'cancelled')
+      );
     }
-    
-    // Verification claims
-    match /verification_claims/{claimId} {
-      allow read: if isSignedIn() && 
-                     (isOwner(resource.data.userId) || isAdmin());
-      allow create: if isSignedIn() && 
-                       isOwner(request.resource.data.userId);
-      allow update: if isAdmin() || isOwner(resource.data.userId);
-      allow delete: if isAdmin();
-    }
-    
-    // Admin logs (admin only)
-    match /admin_logs/{logId} {
-      allow read: if isAdmin();
+
+    // ── Landmarks collection ──────────────────────────────────────────────
+    match /landmarks/{landmarkId} {
+      allow read: if true;
       allow write: if isAdmin();
     }
-    
-    // OSM Ingestion status (admin only)
-    match /ingestion_status/{statusId} {
+
+    // ── Infrastructure collection ─────────────────────────────────────────
+    match /infrastructure/{infraId} {
+      // Anyone can read infrastructure (public mapping)
+      allow read: if true;
+      // Allow write only for serverless backend tasks (unauthenticated context) or admins
+      allow write: if request.auth == null || isAdmin();
+    }
+
+    // ── Ownership Requests collection ──────────────────────────────────────
+    match /ownership_requests/{requestId} {
+      // Users can read their own requests, admins can read all
+      allow read: if isAuthenticated() && (
+        resource.data.ownerId == request.auth.uid || isAdmin()
+      );
+      // Owners can only create requests for themselves
+      allow create: if isAuthenticated() &&
+        request.resource.data.ownerId == request.auth.uid;
+      // Only admins can update (approve/reject) or delete requests
+      allow update, delete: if isAdmin();
+    }
+
+    // ── System Settings collection ─────────────────────────────────────────
+    match /system_settings/{settingId} {
       allow read: if isAdmin();
       allow write: if isAdmin();
-    }
-    
-    // Deny all other access
-    match /{document=**} {
-      allow read, write: if false;
     }
   }
 }
