@@ -45,7 +45,7 @@ export function Navbar() {
           {/* ── Logo ── */}
           <Link href="/" className="flex items-center gap-2.5 group" aria-label="PlaySphere AI Home">
             <div className="w-9 h-9 bg-yellow-400 border-2 border-black flex items-center justify-center shadow-[2px_2px_0px_#000] group-hover:-translate-x-0.5 group-hover:-translate-y-0.5 group-hover:shadow-[3px_3px_0px_#22d3ee] transition-all duration-150">          </div>
-              <img src="/favicon.png"/>  
+              <img src="/favicon.ico"/>  
             </div>
             <span
               className="gradient-text text-lg hidden sm:block"
