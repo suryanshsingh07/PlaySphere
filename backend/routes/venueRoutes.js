@@ -63,6 +63,21 @@ router.get('/', async (req, res) => {
   }
 });
 
+// @desc    Get distinct sports and areas from active venues
+// @route   GET /api/venues/meta
+// @access  Public
+router.get('/meta', async (req, res) => {
+  try {
+    const [sports, areas] = await Promise.all([
+      Venue.distinct('sports.name', { isActive: true }),
+      Venue.distinct('area', { isActive: true }),
+    ]);
+    res.json({ success: true, data: { sports: sports.sort(), areas: areas.filter(Boolean).sort() } });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
 // @desc    Get venues near a location
 // @route   GET /api/venues/nearby
 // @access  Public

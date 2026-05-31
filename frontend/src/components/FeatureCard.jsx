@@ -5,12 +5,12 @@ export default function FeatureCard({ icon: Icon, title, description, badge = ''
     <div 
       className="glass feature-card-wrapper"
       style={{
-        padding: '32px 24px',
+        padding: 'clamp(20px, 4vw, 32px) clamp(16px, 4vw, 24px)',
         borderRadius: 'var(--radius-lg)',
         border: '1px solid var(--glass-border)',
         display: 'flex',
         flexDirection: 'column',
-        gap: '16px',
+        gap: 'clamp(12px, 2vw, 16px)',
         position: 'relative',
         overflow: 'hidden',
         transition: 'all var(--transition-base)',
@@ -22,9 +22,9 @@ export default function FeatureCard({ icon: Icon, title, description, badge = ''
           className="badge badge-cyan" 
           style={{ 
             position: 'absolute', 
-            top: '20px', 
-            right: '20px', 
-            fontSize: '0.65rem', 
+            top: 'clamp(14px, 3vw, 20px)', 
+            right: 'clamp(14px, 3vw, 20px)', 
+            fontSize: 'clamp(0.55rem, 1vw, 0.65rem)', 
             padding: '2px 8px' 
           }}
         >
@@ -36,8 +36,10 @@ export default function FeatureCard({ icon: Icon, title, description, badge = ''
       <div 
         className="flex-center" 
         style={{
-          width: '48px',
-          height: '48px',
+          width: 'clamp(40px, 6vw, 48px)',
+          height: 'clamp(40px, 6vw, 48px)',
+          minWidth: '40px',
+          minHeight: '40px',
           borderRadius: '12px',
           background: 'linear-gradient(135deg, rgba(6, 182, 212, 0.15) 0%, rgba(139, 92, 246, 0.15) 100%)',
           color: 'var(--accent-primary)',
@@ -51,7 +53,7 @@ export default function FeatureCard({ icon: Icon, title, description, badge = ''
       <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
         <h3 style={{ 
           fontFamily: 'var(--font-display)', 
-          fontSize: '1.2rem', 
+          fontSize: 'clamp(1rem, 2.5vw, 1.2rem)', 
           fontWeight: 700, 
           color: '#fff' 
         }}>

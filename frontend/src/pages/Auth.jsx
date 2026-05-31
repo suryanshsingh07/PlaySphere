@@ -1,389 +1,455 @@
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import axios from 'axios';
 import { useAuth } from '../App';
-import { Mail, Lock, User, Phone, Sparkles, AlertCircle, Loader } from 'lucide-react';
+import {
+  Mail, Lock, User, Phone, Sparkles, AlertCircle,
+  Loader, CheckCircle, Eye, EyeOff, ArrowRight, Zap, BarChart2, Globe
+} from 'lucide-react';
 
-const SPORTS = ['football', 'cricket', 'badminton', 'tennis', 'basketball', 'swimming', 'gym'];
+const ROLE_OPTIONS = [
+  { id: 'user', title: 'Player', icon: '⚽', color: '#06b6d4', desc: 'Book venues & track games' },
+  { id: 'venue_owner', title: 'Venue Owner', icon: '🏆', color: '#8b5cf6', desc: 'Manage facilities & analytics' }
+];
+
+const REGISTER_FEATURES = [
+  { icon: <Zap size={20} />, title: 'Instant Bookings', desc: 'Reserve courts in seconds with AI assistance' },
+  { icon: <BarChart2 size={20} />, title: 'Smart Analytics', desc: 'Track revenue, demand & performance trends' },
+  { icon: <Globe size={20} />, title: 'Live Map Search', desc: 'Discover venues near you on an interactive map' },
+];
+
+const LOGIN_FEATURES = [
+  { icon: <Zap size={20} />, title: 'AI Sports Copilot', desc: '"Book badminton 7 PM near you" — done in seconds' },
+  { icon: <Globe size={20} />, title: 'Dynamic Venues', desc: 'Football, cricket, badminton, swimming & more' },
+  { icon: <BarChart2 size={20} />, title: 'Real-Time Slots', desc: 'Live availability with instant booking confirmation' },
+];
 
 export default function Auth() {
   const { login } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
+  const isLogin = location.pathname === '/login';
 
-  const [isLoginMode, setIsLoginMode] = useState(true);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [success, setSuccess] = useState(null);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirm, setShowConfirm] = useState(false);
+  const [sports, setSports] = useState([]);
+  const [stats, setStats] = useState({ totalVenues: 0, totalBookings: 0, avgRating: 0 });
 
-  // Form Fields
-  const [username, setUsername] = useState('');
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [role, setRole] = useState('user'); // user | venue_owner
-  const [phone, setPhone] = useState('');
+  const [form, setForm] = useState({ username: '', email: '', password: '', confirmPassword: '', phone: '' });
+  const [role, setRole] = useState('user');
   const [preferredSports, setPreferredSports] = useState([]);
+  const [errors, setErrors] = useState({});
 
-  const toggleSportSelection = (sport) => {
-    if (preferredSports.includes(sport)) {
-      setPreferredSports(preferredSports.filter(s => s !== sport));
-    } else {
-      setPreferredSports([...preferredSports, sport]);
-    }
+  // Fetch dynamic sports list
+  useEffect(() => {
+    axios.get('/api/venues/meta').then(res => {
+      if (res.data.success) {
+        setSports(res.data.data.sports || []);
+      }
+    }).catch(() => {});
+
+    // Fetch platform stats
+    axios.get('/api/analytics/stats').then(res => {
+      if (res.data.success) {
+        setStats({
+          totalVenues: res.data.data.totalVenues || 0,
+          totalBookings: res.data.data.totalBookings || 0,
+          avgRating: res.data.data.avgRating || 0
+        });
+      }
+    }).catch(() => {});
+  }, []);
+
+  const setField = (key, val) => {
+    setForm(f => ({ ...f, [key]: val }));
+    setErrors(e => ({ ...e, [key]: null }));
   };
 
-  const handleDemoLogin = async (demoEmail, demoPassword) => {
-    setLoading(true);
-    setError(null);
-    try {
-      const res = await axios.post('/api/auth/login', { email: demoEmail, password: demoPassword });
-      if (res.data.success) {
-        login(res.data.data, res.data.data.token);
-        navigate(res.data.data.role === 'venue_owner' ? '/dashboard' : '/');
-      }
-    } catch (err) {
-      console.error(err);
-      setError(err.response?.data?.message || 'Demo login failed.');
-    } finally {
-      setLoading(false);
+  const validate = () => {
+    const e = {};
+    if (!form.email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) e.email = 'Valid email required';
+    if (!form.password || form.password.length < 6) e.password = 'Minimum 6 characters';
+    if (!isLogin) {
+      if (!form.username || form.username.length < 3) e.username = 'Minimum 3 characters';
+      if (form.password !== form.confirmPassword) e.confirmPassword = 'Passwords do not match';
+      if (form.phone && !/^\d{10}$/.test(form.phone.replace(/\D/g, ''))) e.phone = 'Must be 10 digits';
+      if (role === 'user' && preferredSports.length === 0) e.sports = 'Select at least one sport';
     }
+    setErrors(e);
+    return Object.keys(e).length === 0;
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (!validate()) return;
     setLoading(true);
     setError(null);
-
+    setSuccess(null);
     try {
-      if (isLoginMode) {
-        // Login API Call
-        const res = await axios.post('/api/auth/login', { email, password });
+      if (isLogin) {
+        const res = await axios.post('/api/auth/login', { email: form.email, password: form.password });
         if (res.data.success) {
+          setSuccess('Login successful! Redirecting...');
           login(res.data.data, res.data.data.token);
-          navigate('/');
+          setTimeout(() => {
+            const r = res.data.data.role;
+            navigate(r === 'admin' ? '/admin' : r === 'venue_owner' ? '/dashboard' : '/explore');
+          }, 700);
         }
       } else {
-        // Register API Call
         const res = await axios.post('/api/auth/register', {
-          username,
-          email,
-          password,
+          username: form.username,
+          email: form.email,
+          password: form.password,
           role,
-          phone,
-          preferredSports
+          phone: form.phone || undefined,
+          preferredSports: role === 'user' ? preferredSports : undefined,
         });
         if (res.data.success) {
-          login(res.data.data, res.data.data.token);
-          navigate(res.data.data.role === 'venue_owner' ? '/dashboard' : '/');
+          if (res.data.pendingApproval) {
+            setSuccess(res.data.message);
+            setTimeout(() => navigate('/login'), 2000);
+          } else {
+            setSuccess('Account created! Redirecting...');
+            login(res.data.data, res.data.data.token);
+            setTimeout(() => navigate(role === 'venue_owner' ? '/dashboard' : '/explore'), 700);
+          }
         }
       }
     } catch (err) {
-      console.error(err);
-      setError(err.response?.data?.message || 'Authentication failed. Please verify credentials.');
+      setError(err.response?.data?.message || 'Authentication failed. Please try again.');
     } finally {
       setLoading(false);
     }
   };
 
-  return (
-    <div className="flex-center hero-bg" style={{ minHeight: '85vh', padding: '40px 16px', background: 'var(--gradient-hero)' }}>
-      {/* Background orbs */}
-      <div style={{
-        position: 'absolute',
-        top: '30%',
-        left: '15%',
-        width: '260px',
-        height: '260px',
-        background: 'rgba(6, 182, 212, 0.1)',
-        borderRadius: '50%',
-        filter: 'blur(100px)',
-        pointerEvents: 'none'
-      }} />
-      <div style={{
-        position: 'absolute',
-        bottom: '25%',
-        right: '15%',
-        width: '260px',
-        height: '260px',
-        background: 'rgba(139, 92, 246, 0.1)',
-        borderRadius: '50%',
-        filter: 'blur(100px)',
-        pointerEvents: 'none'
-      }} />
+  const switchMode = (path) => {
+    setErrors({});
+    setError(null);
+    setSuccess(null);
+    navigate(path);
+  };
 
-      <div className="glass-strong animate-fade-in" style={{
-        width: '100%',
-        maxWidth: isLoginMode ? '420px' : '520px',
-        borderRadius: 'var(--radius-lg)',
-        border: '1px solid var(--glass-border)',
-        boxShadow: 'var(--shadow-xl)',
-        padding: '32px',
-        position: 'relative',
-        zIndex: 10,
-        transition: 'max-width var(--transition-slow)'
-      }}>
-        {/* Toggle tabs */}
-        <div style={{ display: 'flex', gap: '8px', borderBottom: '1px solid rgba(255,255,255,0.05)', marginBottom: '24px', paddingBottom: '10px' }}>
-          <button
-            type="button"
-            onClick={() => { setIsLoginMode(true); setError(null); }}
-            style={{
-              background: 'transparent',
-              fontSize: '1.1rem',
-              fontWeight: 700,
-              color: isLoginMode ? '#fff' : 'var(--text-secondary)',
-              border: 'none',
-              borderBottom: isLoginMode ? '2px solid var(--accent-primary)' : '2px solid transparent',
-              paddingBottom: '8px',
-              cursor: 'pointer'
-            }}
-          >
-            Sign In
-          </button>
-          <button
-            type="button"
-            onClick={() => { setIsLoginMode(false); setError(null); }}
-            style={{
-              background: 'transparent',
-              fontSize: '1.1rem',
-              fontWeight: 700,
-              color: !isLoginMode ? '#fff' : 'var(--text-secondary)',
-              border: 'none',
-              borderBottom: !isLoginMode ? '2px solid var(--accent-primary)' : '2px solid transparent',
-              paddingBottom: '8px',
-              cursor: 'pointer'
-            }}
-          >
-            Register Account
-          </button>
-        </div>
+return (
+    <div className="auth-page">
+      <div className="auth-orb auth-orb-1" />
+      <div className="auth-orb auth-orb-2" />
 
-        <div style={{ marginBottom: '20px' }}>
-          <h2 style={{ fontFamily: 'var(--font-display)', fontSize: '1.5rem', fontWeight: 800, color: '#fff', display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <Sparkles size={20} className="text-gradient" /> PlaySphere
-          </h2>
-          <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginTop: '4px' }}>
-            {isLoginMode 
-              ? 'Enter email and password to log back in.' 
-              : 'Join the premier sports arena booking network.'}
-          </p>
-        </div>
-
-        {error && (
-          <div className="alert alert-danger" style={{ padding: '10px 14px', fontSize: '0.85rem' }}>
-            <AlertCircle size={16} />
-            <span>{error}</span>
-          </div>
-        )}
-
-        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-          {/* Username (Only Register) */}
-          {!isLoginMode && (
-            <div className="form-group" style={{ marginBottom: 0 }}>
-              <label className="form-label">Username</label>
-              <div className="input-icon-wrapper">
-                <User size={16} className="icon-left" />
-                <input
-                  type="text"
-                  placeholder="e.g. arjun_striker"
-                  className="form-input"
-                  value={username}
-                  onChange={(e) => setUsername(e.target.value)}
-                  required={!isLoginMode}
-                />
-              </div>
+      <div className="auth-wrapper">
+        {/* Left panel — both login & register on desktop */}
+        <div className="auth-left">
+          <div className="auth-left-inner">
+            <div className="auth-brand">
+              <Sparkles size={28} className="text-gradient" />
+              <span className="auth-brand-name">PlaySphere</span>
             </div>
-          )}
 
-          {/* Email */}
-          <div className="form-group" style={{ marginBottom: 0 }}>
-            <label className="form-label">Email Address</label>
-            <div className="input-icon-wrapper">
-              <Mail size={16} className="icon-left" />
-              <input
-                type="email"
-                placeholder="e.g. name@playsphere.in"
-                className="form-input"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-              />
-            </div>
-          </div>
-
-          {/* Password */}
-          <div className="form-group" style={{ marginBottom: 0 }}>
-            <label className="form-label">Password</label>
-            <div className="input-icon-wrapper">
-              <Lock size={16} className="icon-left" />
-              <input
-                type="password"
-                placeholder="••••••••"
-                className="form-input"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-              />
-            </div>
-          </div>
-
-          {/* Role selection & Phone (Only Register) */}
-          {!isLoginMode && (
-            <>
-              <div className="form-row">
-                <div className="form-group" style={{ marginBottom: 0 }}>
-                  <label className="form-label">Register As</label>
-                  <select
-                    className="form-select"
-                    value={role}
-                    onChange={(e) => setRole(e.target.value)}
-                    style={{ padding: '12px 16px', fontSize: '0.95rem' }}
-                  >
-                    <option value="user">Player (Athlete)</option>
-                    <option value="venue_owner">Venue Owner (Manager)</option>
-                  </select>
-                </div>
-
-                <div className="form-group" style={{ marginBottom: 0 }}>
-                  <label className="form-label">Mobile Number</label>
-                  <div className="input-icon-wrapper">
-                    <Phone size={16} className="icon-left" />
-                    <input
-                      type="tel"
-                      placeholder="e.g. 9876543210"
-                      className="form-input"
-                      value={phone}
-                      onChange={(e) => setPhone(e.target.value)}
-                    />
+            {isLogin ? (
+              <>
+                <h1 className="auth-left-title">Welcome Back, Athlete! 🏃</h1>
+                <p className="auth-left-sub">
+                  Your courts are waiting. Sign in to manage bookings, explore venues, and let the AI copilot handle the rest.
+                </p>
+                {/* Stats row */}
+                <div className="auth-left-stats">
+                  <div className="auth-left-stat">
+                    <span className="auth-left-stat-value">{stats.totalVenues}+</span>
+                    <span className="auth-left-stat-label">Venues</span>
+                  </div>
+                  <div className="auth-left-stat">
+                    <span className="auth-left-stat-value">{stats.totalBookings}+</span>
+                    <span className="auth-left-stat-label">Bookings</span>
+                  </div>
+                  <div className="auth-left-stat">
+                    <span className="auth-left-stat-value">{stats.avgRating.toFixed(1)}★</span>
+                    <span className="auth-left-stat-label">Avg Rating</span>
                   </div>
                 </div>
+                <div className="auth-features">
+                  {LOGIN_FEATURES.map((f, i) => (
+                    <div key={i} className="auth-feature-item">
+                      <div className="auth-feature-icon">{f.icon}</div>
+                      <div>
+                        <div className="auth-feature-title">{f.title}</div>
+                        <div className="auth-feature-desc">{f.desc}</div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                <div className="auth-left-badge">🤖 AI-Powered · Zero Friction</div>
+              </>
+            ) : (
+              <>
+                <h1 className="auth-left-title">Your Sports Journey Starts Here</h1>
+                <p className="auth-left-sub">
+                  The AI-powered platform for discovering, booking, and managing sports venues across India.
+                </p>
+                <div className="auth-features">
+                  {REGISTER_FEATURES.map((f, i) => (
+                    <div key={i} className="auth-feature-item">
+                      <div className="auth-feature-icon">{f.icon}</div>
+                      <div>
+                        <div className="auth-feature-title">{f.title}</div>
+                        <div className="auth-feature-desc">{f.desc}</div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                <div className="auth-left-badge">🏟️ Dynamic Venues</div>
+              </>
+            )}
+          </div>
+        </div>
+
+        {/* Right side - Auth Form Card */}
+        <div style={{ flex: '1', width: '100%', maxWidth: isLogin ? 'clamp(280px, 95vw, 500px)' : 'clamp(280px, 95vw, 520px)', minWidth: '0' }}>
+          <div style={{
+            padding: 'clamp(16px, 4vw, 48px)',
+            borderRadius: '20px',
+            border: '1px solid rgba(255,255,255,0.12)',
+            background: 'rgba(15,23,42,0.8)',
+            backdropFilter: 'blur(20px)',
+            boxShadow: '0 8px 32px rgba(0,0,0,0.3), inset 0 1px 1px rgba(255,255,255,0.1)',
+            width: '100%'
+          }}>
+            
+            {/* Header */}
+            <div style={{ marginBottom: '28px', textAlign: isLogin ? 'center' : 'left' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 'clamp(6px, 2vw, 10px)', marginBottom: '12px', justifyContent: isLogin ? 'center' : 'flex-start' }}>
+                <Sparkles size={20} className="text-gradient" />
+                <h2 style={{ fontFamily: 'var(--font-display)', fontSize: 'clamp(1.3rem, 4vw, 1.6rem)', fontWeight: 800, color: '#fff' }}>
+                  PlaySphere
+                </h2>
+              </div>
+              <p style={{ fontSize: 'clamp(0.8rem, 2vw, 0.9rem)', color: 'var(--text-secondary)' }}>
+                {isLogin 
+                  ? 'Welcome back! Access your sports journey.'
+                  : 'Create your account to get started.'}
+              </p>
+            </div>
+
+            {/* Tab Navigation */}
+            <div style={{ display: 'flex', gap: '0', borderBottom: '2px solid rgba(255,255,255,0.06)', marginBottom: '24px' }}>
+              <button
+                type="button"
+                className={`auth-tab ${isLogin ? 'auth-tab-active' : ''}`}
+                onClick={() => switchMode('/login')}
+              >
+                Sign In
+              </button>
+              <button
+                type="button"
+                className={`auth-tab ${!isLogin ? 'auth-tab-active' : ''}`}
+                onClick={() => switchMode('/register')}
+              >
+                Create Account
+              </button>
+            </div>
+
+            <p className="auth-tagline">
+              {isLogin ? 'Welcome back! Access your sports journey.' : 'Join thousands of athletes and venue owners.'}
+            </p>
+
+            {/* Alerts */}
+            {success && (
+              <div className="auth-alert auth-alert-success">
+                <CheckCircle size={16} />
+                <span>{success}</span>
+              </div>
+            )}
+            {error && (
+              <div className="auth-alert auth-alert-error">
+                <AlertCircle size={16} />
+                <span>{error}</span>
+              </div>
+            )}
+
+
+
+            {/* Role selector (register only) */}
+            {!isLogin && (
+              <div className="auth-field">
+                <label className="auth-label">I am a</label>
+                <div className="auth-roles">
+                  {ROLE_OPTIONS.map(opt => (
+                    <button
+                      key={opt.id}
+                      type="button"
+                      className={`auth-role-btn ${role === opt.id ? 'auth-role-active' : ''}`}
+                      style={{ '--role-color': opt.color }}
+                      onClick={() => { setRole(opt.id); setPreferredSports([]); setErrors(e => ({ ...e, sports: null })); }}
+                    >
+                      <span className="auth-role-icon">{opt.icon}</span>
+                      <span className="auth-role-title">{opt.title}</span>
+                      <span className="auth-role-desc">{opt.desc}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            <form onSubmit={handleSubmit} className="auth-form" noValidate>
+
+              {/* Username */}
+              {!isLogin && (
+                <div className="auth-field">
+                  <label className="auth-label">Username</label>
+                  <div className="auth-input-wrap">
+                    <User size={15} className="auth-input-icon" />
+                    <input
+                      type="text"
+                      className={`auth-input ${errors.username ? 'auth-input-error' : ''}`}
+                      placeholder="arjun_striker"
+                      value={form.username}
+                      onChange={e => setField('username', e.target.value)}
+                      autoComplete="username"
+                    />
+                  </div>
+                  {errors.username && <span className="auth-error-msg">{errors.username}</span>}
+                </div>
+              )}
+
+              {/* Email */}
+              <div className="auth-field">
+                <label className="auth-label">Email Address</label>
+                <div className="auth-input-wrap">
+                  <Mail size={15} className="auth-input-icon" />
+                  <input
+                    type="email"
+                    className={`auth-input ${errors.email ? 'auth-input-error' : ''}`}
+                    placeholder="your@email.com"
+                    value={form.email}
+                    onChange={e => setField('email', e.target.value)}
+                    autoComplete="email"
+                  />
+                </div>
+                {errors.email && <span className="auth-error-msg">{errors.email}</span>}
               </div>
 
+              {/* Password */}
+              <div className="auth-field">
+                <label className="auth-label">Password</label>
+                <div className="auth-input-wrap">
+                  <Lock size={15} className="auth-input-icon" />
+                  <input
+                    type={showPassword ? 'text' : 'password'}
+                    className={`auth-input auth-input-pr ${errors.password ? 'auth-input-error' : ''}`}
+                    placeholder="••••••••"
+                    value={form.password}
+                    onChange={e => setField('password', e.target.value)}
+                    autoComplete={isLogin ? 'current-password' : 'new-password'}
+                  />
+                  <button type="button" className="auth-eye-btn" onClick={() => setShowPassword(v => !v)} tabIndex={-1}>
+                    {showPassword ? <EyeOff size={15} /> : <Eye size={15} />}
+                  </button>
+                </div>
+                {errors.password && <span className="auth-error-msg">{errors.password}</span>}
+              </div>
+
+              {/* Confirm Password */}
+              {!isLogin && (
+                <div className="auth-field">
+                  <label className="auth-label">Confirm Password</label>
+                  <div className="auth-input-wrap">
+                    <Lock size={15} className="auth-input-icon" />
+                    <input
+                      type={showConfirm ? 'text' : 'password'}
+                      className={`auth-input auth-input-pr ${errors.confirmPassword ? 'auth-input-error' : ''}`}
+                      placeholder="••••••••"
+                      value={form.confirmPassword}
+                      onChange={e => setField('confirmPassword', e.target.value)}
+                      autoComplete="new-password"
+                    />
+                    <button type="button" className="auth-eye-btn" onClick={() => setShowConfirm(v => !v)} tabIndex={-1}>
+                      {showConfirm ? <EyeOff size={15} /> : <Eye size={15} />}
+                    </button>
+                  </div>
+                  {errors.confirmPassword && <span className="auth-error-msg">{errors.confirmPassword}</span>}
+                </div>
+              )}
+
+              {/* Phone */}
+              {!isLogin && (
+                <div className="auth-field">
+                  <label className="auth-label">
+                    Mobile Number <span className="auth-optional">(Optional)</span>
+                  </label>
+                  <div className="auth-input-wrap">
+                    <Phone size={15} className="auth-input-icon" />
+                    <input
+                      type="tel"
+                      className={`auth-input ${errors.phone ? 'auth-input-error' : ''}`}
+                      placeholder="9876543210"
+                      value={form.phone}
+                      onChange={e => setField('phone', e.target.value)}
+                      autoComplete="tel"
+                    />
+                  </div>
+                  {errors.phone && <span className="auth-error-msg">{errors.phone}</span>}
+                </div>
+              )}
+
               {/* Preferred Sports */}
-              {role === 'user' && (
-                <div className="form-group" style={{ marginBottom: 0 }}>
-                  <label className="form-label">Preferred Sports</label>
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginTop: '6px' }}>
-                    {SPORTS.map((sport) => {
-                      const isSelected = preferredSports.includes(sport);
-                      return (
+              {!isLogin && role === 'user' && (
+                <div className="auth-field">
+                  <label className="auth-label">
+                    Preferred Sports <span className="auth-required">*</span>
+                  </label>
+                  <div className="auth-sports-grid">
+                    {sports.length === 0 ? (
+                      <div style={{ gridColumn: '1 / -1', textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.8rem', padding: '10px' }}>
+                        Loading sports...
+                      </div>
+                    ) : (
+                      sports.map(sport => (
                         <button
                           key={sport}
                           type="button"
-                          onClick={() => toggleSportSelection(sport)}
-                          className={`badge ${isSelected ? 'badge-cyan' : 'badge-ghost'}`}
-                          style={{
-                            padding: '4px 12px',
-                            cursor: 'pointer',
-                            fontSize: '0.75rem',
-                            border: isSelected ? 'none' : '1px solid rgba(255,255,255,0.05)',
-                            background: isSelected ? 'var(--accent-primary)' : 'rgba(255,255,255,0.02)',
-                            color: isSelected ? '#fff' : 'var(--text-secondary)'
+                          className={`auth-sport-btn ${preferredSports.includes(sport) ? 'auth-sport-active' : ''}`}
+                          onClick={() => {
+                            setPreferredSports(prev =>
+                              prev.includes(sport) ? prev.filter(s => s !== sport) : [...prev, sport]
+                            );
+                            setErrors(e => ({ ...e, sports: null }));
                           }}
                         >
                           {sport}
                         </button>
-                      );
-                    })}
+                      ))
+                    )}
                   </div>
+                  {errors.sports && <span className="auth-error-msg">{errors.sports}</span>}
                 </div>
               )}
-            </>
-          )}
 
-          {/* Submit Button */}
-          <button
-            type="submit"
-            className="btn btn-primary"
-            disabled={loading}
-            style={{ width: '100%', marginTop: '10px' }}
-          >
-            {loading ? (
-              <>
-                <Loader size={16} className="spin" style={{ animation: 'spin 1s linear infinite' }} /> Processing...
-              </>
-            ) : (
-              isLoginMode ? 'Sign In' : 'Create Account'
-            )}
-          </button>
+              {/* Submit */}
+              <button type="submit" className="auth-submit-btn" disabled={loading}>
+                {loading ? (
+                  <>
+                    <Loader size={16} style={{ animation: 'spin 1s linear infinite' }} />
+                    Processing...
+                  </>
+                ) : (
+                  <>
+                    {isLogin ? 'Sign In to PlaySphere' : 'Create My Account'}
+                    <ArrowRight size={16} />
+                  </>
+                )}
+              </button>
+            </form>
 
-          {/* One-Click Instant Login (Only in Sign In Mode) */}
-          {isLoginMode && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '6px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <span style={{ height: '1px', flex: 1, background: 'rgba(255, 255, 255, 0.08)' }} />
-                <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-accent)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>One-Click Demo Access</span>
-                <span style={{ height: '1px', flex: 1, background: 'rgba(255, 255, 255, 0.08)' }} />
-              </div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
-                <button
-                  type="button"
-                  onClick={() => handleDemoLogin('arjun@playsphere.in', 'password123')}
-                  className="btn btn-ghost"
-                  disabled={loading}
-                  style={{
-                    padding: '10px',
-                    fontSize: '0.8rem',
-                    border: '1px solid rgba(6, 182, 212, 0.2)',
-                    background: 'rgba(6, 182, 212, 0.03)',
-                    color: '#fff',
-                    borderRadius: 'var(--radius-sm)',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                    gap: '4px',
-                    cursor: 'pointer',
-                    transition: 'all 0.3s ease'
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.background = 'rgba(6, 182, 212, 0.1)';
-                    e.currentTarget.style.borderColor = 'rgba(6, 182, 212, 0.5)';
-                    e.currentTarget.style.boxShadow = '0 0 10px rgba(6, 182, 212, 0.2)';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.background = 'rgba(6, 182, 212, 0.03)';
-                    e.currentTarget.style.borderColor = 'rgba(6, 182, 212, 0.2)';
-                    e.currentTarget.style.boxShadow = 'none';
-                  }}
-                >
-                  <span style={{ fontWeight: 700, color: 'var(--accent-primary)' }}>⚽ Athlete Demo</span>
-                  <span style={{ fontSize: '0.65rem', color: 'var(--text-secondary)' }}>Book Courts</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleDemoLogin('rahul@playsphere.in', 'password123')}
-                  className="btn btn-ghost"
-                  disabled={loading}
-                  style={{
-                    padding: '10px',
-                    fontSize: '0.8rem',
-                    border: '1px solid rgba(139, 92, 246, 0.2)',
-                    background: 'rgba(139, 92, 246, 0.03)',
-                    color: '#fff',
-                    borderRadius: 'var(--radius-sm)',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                    gap: '4px',
-                    cursor: 'pointer',
-                    transition: 'all 0.3s ease'
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.background = 'rgba(139, 92, 246, 0.1)';
-                    e.currentTarget.style.borderColor = 'rgba(139, 92, 246, 0.5)';
-                    e.currentTarget.style.boxShadow = '0 0 10px rgba(139, 92, 246, 0.2)';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.background = 'rgba(139, 92, 246, 0.03)';
-                    e.currentTarget.style.borderColor = 'rgba(139, 92, 246, 0.2)';
-                    e.currentTarget.style.boxShadow = 'none';
-                  }}
-                >
-                  <span style={{ fontWeight: 700, color: '#a78bfa' }}>🏆 Owner Demo</span>
-                  <span style={{ fontSize: '0.65rem', color: 'var(--text-secondary)' }}>Manage Arenas</span>
-                </button>
-              </div>
-            </div>
-          )}
-        </form>
+            {/* Footer link */}
+            <p className="auth-footer-text">
+              {isLogin ? "Don't have an account? " : 'Already have an account? '}
+              <button type="button" className="auth-link-btn" onClick={() => switchMode(isLogin ? '/register' : '/login')}>
+                {isLogin ? 'Sign up free' : 'Sign in here'}
+              </button>
+            </p>
+          </div>
+        </div>
       </div>
     </div>
   );

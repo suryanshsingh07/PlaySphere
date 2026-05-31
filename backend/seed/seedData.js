@@ -1,356 +1,313 @@
 require('dotenv').config({ path: require('path').join(__dirname, '../.env') });
-const mongoose = require('../config/mongooseMock');
+const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
-
 const connectDB = require('../config/db');
 const User = require('../models/User');
 const Venue = require('../models/Venue');
 const Booking = require('../models/Booking');
 const Review = require('../models/Review');
 
-// ── Seed Data ────────────────────────────────────────────
-
-const users = [
-  {
-    username: 'playsphere_admin',
-    email: 'admin@playsphere.in',
-    password: 'admin123',
-    role: 'admin',
-    phone: '9876543210',
-    preferredSports: ['football', 'cricket'],
-    skillLevel: 'professional',
-  },
-  {
-    username: 'rahul_sports',
-    email: 'rahul@playsphere.in',
-    password: 'password123',
-    role: 'venue_owner',
-    phone: '9123456789',
-    preferredSports: ['badminton', 'tennis'],
-    skillLevel: 'advanced',
-  },
-  {
-    username: 'priya_athlete',
-    email: 'priya@playsphere.in',
-    password: 'password123',
-    role: 'venue_owner',
-    phone: '9234567890',
-    preferredSports: ['swimming', 'gym'],
-    skillLevel: 'advanced',
-  },
-  {
-    username: 'arjun_player',
-    email: 'arjun@playsphere.in',
-    password: 'password123',
-    role: 'user',
-    phone: '9345678901',
-    preferredSports: ['football', 'badminton'],
-    skillLevel: 'intermediate',
-  },
-  {
-    username: 'sneha_sports',
-    email: 'sneha@playsphere.in',
-    password: 'password123',
-    role: 'user',
-    phone: '9456789012',
-    preferredSports: ['tennis', 'swimming'],
-    skillLevel: 'beginner',
-  },
-];
-
-const getVenues = (ownerIds) => [
+// ── Lucknow venues — real areas from PS-25 ───────────────
+const VENUES = [
   {
     name: 'Gomti Nagar Sports Arena',
-    description: 'Premium multi-sport complex in the heart of Gomti Nagar with professional-grade courts and top-notch amenities.',
-    address: 'Sector 8, Gomti Nagar, Lucknow',
-    area: 'Gomti Nagar',
-    city: 'Lucknow',
-    location: { type: 'Point', coordinates: [80.9933, 26.8554] },
+    description: 'Premium multi-sport complex in the heart of Gomti Nagar with world-class badminton courts, table tennis tables, and squash courts.',
+    address: 'Vibhuti Khand, Gomti Nagar, Lucknow',
+    area: 'Gomti Nagar', city: 'Lucknow',
+    location: { type: 'Point', coordinates: [80.9983, 26.8467] },
     sports: [
-      { name: 'badminton', courts: 4, pricePerHour: 400, maxPlayers: 4 },
-      { name: 'table-tennis', courts: 2, pricePerHour: 200, maxPlayers: 2 },
-      { name: 'squash', courts: 2, pricePerHour: 500, maxPlayers: 2 },
+      { name: 'badminton', courts: 4, pricePerHour: 300, maxPlayers: 4 },
+      { name: 'table-tennis', courts: 3, pricePerHour: 200, maxPlayers: 4 },
+      { name: 'squash', courts: 2, pricePerHour: 350, maxPlayers: 2 },
     ],
-    amenities: ['parking', 'changing-rooms', 'showers', 'cafeteria', 'ac', 'floodlights'],
-    owner: ownerIds[0],
-    rating: 4.7,
-    totalReviews: 128,
+    amenities: ['parking', 'changing-rooms', 'showers', 'cafeteria', 'floodlights', 'coaching', 'drinking-water'],
+    rating: 4.7, totalReviews: 48,
     operatingHours: { open: '06:00', close: '23:00' },
-    contactPhone: '9876540001',
-    contactEmail: 'gomtisports@playsphere.in',
+    contactPhone: '9876501001', contactEmail: 'gomtinagar@playsphere.in',
   },
   {
     name: 'Hazratganj Cricket Ground',
-    description: 'Historical cricket venue near Hazratganj with well-maintained pitches, professional coaching, and a great atmosphere for serious cricket lovers.',
-    address: 'Near Gandhi Park, Hazratganj, Lucknow',
-    area: 'Hazratganj',
-    city: 'Lucknow',
-    location: { type: 'Point', coordinates: [80.9462, 26.8508] },
+    description: 'Historic cricket ground near Hazratganj with full-size turf pitch, practice nets, and professional coaching facilities.',
+    address: 'Near Hazratganj Market, Lucknow',
+    area: 'Hazratganj', city: 'Lucknow',
+    location: { type: 'Point', coordinates: [80.9462, 26.8467] },
     sports: [
       { name: 'cricket', courts: 2, pricePerHour: 800, maxPlayers: 22 },
     ],
-    amenities: ['parking', 'changing-rooms', 'first-aid', 'coaching', 'seating-area', 'drinking-water'],
-    owner: ownerIds[1],
-    rating: 4.5,
-    totalReviews: 89,
-    operatingHours: { open: '05:00', close: '20:00' },
-    contactPhone: '9876540002',
-    contactEmail: 'hazratganj.cricket@playsphere.in',
+    amenities: ['parking', 'changing-rooms', 'floodlights', 'coaching', 'equipment-rental', 'seating-area', 'drinking-water'],
+    rating: 4.5, totalReviews: 36,
+    operatingHours: { open: '06:00', close: '22:00' },
+    contactPhone: '9876501002', contactEmail: 'hazratganj@playsphere.in',
   },
   {
     name: 'Indira Nagar Football Hub',
-    description: 'Top-rated artificial turf football facility with FIFA-quality playing surface, full floodlights for night games and tournament infrastructure.',
-    address: 'Sector B, Indira Nagar, Lucknow',
-    area: 'Indira Nagar',
-    city: 'Lucknow',
-    location: { type: 'Point', coordinates: [80.9700, 26.8755] },
+    description: 'Top-rated football turf in Indira Nagar with FIFA-standard artificial grass, floodlights for night games, and changing rooms.',
+    address: 'Sector 18, Indira Nagar, Lucknow',
+    area: 'Indira Nagar', city: 'Lucknow',
+    location: { type: 'Point', coordinates: [80.9962, 26.8767] },
     sports: [
       { name: 'football', courts: 2, pricePerHour: 1200, maxPlayers: 22 },
-      { name: 'volleyball', courts: 1, pricePerHour: 500, maxPlayers: 12 },
+      { name: 'volleyball', courts: 1, pricePerHour: 400, maxPlayers: 12 },
     ],
-    amenities: ['parking', 'floodlights', 'changing-rooms', 'first-aid', 'equipment-rental', 'seating-area'],
-    owner: ownerIds[0],
-    rating: 4.8,
-    totalReviews: 212,
+    amenities: ['parking', 'changing-rooms', 'floodlights', 'first-aid', 'drinking-water', 'seating-area'],
+    rating: 4.8, totalReviews: 62,
     operatingHours: { open: '06:00', close: '23:00' },
-    contactPhone: '9876540003',
-    contactEmail: 'indiranagar.football@playsphere.in',
+    contactPhone: '9876501003', contactEmail: 'indiranagar@playsphere.in',
   },
   {
     name: 'Aliganj Aquatic Centre',
-    description: 'Olympic-standard swimming pool and aquatic training center with heated pool, lanes for competitive swimming and water aerobics.',
-    address: 'Sector C, Aliganj, Lucknow',
-    area: 'Aliganj',
-    city: 'Lucknow',
-    location: { type: 'Point', coordinates: [80.9524, 26.8846] },
+    description: 'Olympic-size swimming pool with heated water, professional coaching, and separate lanes for competitive and recreational swimmers.',
+    address: 'Aliganj Sector C, Lucknow',
+    area: 'Aliganj', city: 'Lucknow',
+    location: { type: 'Point', coordinates: [80.9562, 26.8867] },
     sports: [
-      { name: 'swimming', courts: 1, pricePerHour: 300, maxPlayers: 20 },
+      { name: 'swimming', courts: 1, pricePerHour: 250, maxPlayers: 30 },
     ],
-    amenities: ['parking', 'changing-rooms', 'showers', 'coaching', 'first-aid', 'drinking-water', 'ac'],
-    owner: ownerIds[1],
-    rating: 4.6,
-    totalReviews: 176,
+    amenities: ['parking', 'changing-rooms', 'showers', 'first-aid', 'coaching', 'drinking-water', 'ac'],
+    rating: 4.6, totalReviews: 29,
     operatingHours: { open: '05:30', close: '21:00' },
-    contactPhone: '9876540004',
-    contactEmail: 'aliganj.aquatic@playsphere.in',
+    contactPhone: '9876501004', contactEmail: 'aliganj@playsphere.in',
   },
   {
-    name: 'Chinhat Tennis Club',
-    description: 'Exclusive tennis club with clay and hard courts, professional coaching for all age groups, and a vibrant tennis community.',
-    address: 'Main Road, Chinhat, Lucknow',
-    area: 'Chinhat',
-    city: 'Lucknow',
-    location: { type: 'Point', coordinates: [81.0372, 26.8467] },
+    name: 'Chinhat Turf & Tennis Club',
+    description: 'Modern sports facility in Chinhat with synthetic tennis courts and badminton halls. Popular with IT professionals from nearby tech parks.',
+    address: 'Chinhat Industrial Area, Lucknow',
+    area: 'Chinhat', city: 'Lucknow',
+    location: { type: 'Point', coordinates: [81.0562, 26.8367] },
     sports: [
-      { name: 'tennis', courts: 3, pricePerHour: 600, maxPlayers: 4 },
-      { name: 'badminton', courts: 2, pricePerHour: 350, maxPlayers: 4 },
+      { name: 'tennis', courts: 3, pricePerHour: 500, maxPlayers: 4 },
+      { name: 'badminton', courts: 2, pricePerHour: 280, maxPlayers: 4 },
     ],
-    amenities: ['parking', 'coaching', 'changing-rooms', 'cafeteria', 'equipment-rental', 'floodlights'],
-    owner: ownerIds[0],
-    rating: 4.4,
-    totalReviews: 93,
+    amenities: ['parking', 'changing-rooms', 'cafeteria', 'coaching', 'equipment-rental', 'floodlights'],
+    rating: 4.4, totalReviews: 21,
     operatingHours: { open: '06:00', close: '22:00' },
-    contactPhone: '9876540005',
-    contactEmail: 'chinhat.tennis@playsphere.in',
+    contactPhone: '9876501005', contactEmail: 'chinhat@playsphere.in',
   },
   {
-    name: 'Jankipuram Fitness & Sports Hub',
-    description: 'Modern fitness center with a state-of-the-art gym, indoor basketball court and yoga studio in a premium setting.',
-    address: 'Vikas Khand, Jankipuram, Lucknow',
-    area: 'Jankipuram',
-    city: 'Lucknow',
-    location: { type: 'Point', coordinates: [80.9200, 26.9150] },
+    name: 'Jankipuram Fitness & Basketball Hub',
+    description: 'Multi-purpose sports hub with professional basketball courts and a fully equipped gym. Ideal for fitness enthusiasts and team sports.',
+    address: 'Jankipuram Extension, Lucknow',
+    area: 'Jankipuram', city: 'Lucknow',
+    location: { type: 'Point', coordinates: [80.9262, 26.9067] },
     sports: [
-      { name: 'gym', courts: 1, pricePerHour: 150, maxPlayers: 30 },
-      { name: 'basketball', courts: 1, pricePerHour: 700, maxPlayers: 10 },
+      { name: 'basketball', courts: 2, pricePerHour: 600, maxPlayers: 10 },
+      { name: 'gym', courts: 1, pricePerHour: 150, maxPlayers: 20 },
     ],
-    amenities: ['parking', 'ac', 'changing-rooms', 'showers', 'coaching', 'drinking-water', 'wifi'],
-    owner: ownerIds[1],
-    rating: 4.3,
-    totalReviews: 141,
-    operatingHours: { open: '05:00', close: '23:00' },
-    contactPhone: '9876540006',
-    contactEmail: 'jankipuram.fitness@playsphere.in',
+    amenities: ['parking', 'changing-rooms', 'showers', 'coaching', 'equipment-rental', 'drinking-water', 'ac'],
+    rating: 4.3, totalReviews: 18,
+    operatingHours: { open: '05:00', close: '22:00' },
+    contactPhone: '9876501006', contactEmail: 'jankipuram@playsphere.in',
   },
   {
     name: 'Mahanagar Multi-Sports Complex',
-    description: 'A versatile sports complex offering a wide range of indoor and outdoor sports, ideal for families and competitive players.',
-    address: 'Mahanagar Extension, Lucknow',
-    area: 'Mahanagar',
-    city: 'Lucknow',
-    location: { type: 'Point', coordinates: [80.9650, 26.8600] },
+    description: 'Comprehensive sports complex in Mahanagar offering badminton, table tennis, and volleyball under one roof with professional coaching.',
+    address: 'Mahanagar Colony, Lucknow',
+    area: 'Mahanagar', city: 'Lucknow',
+    location: { type: 'Point', coordinates: [80.9362, 26.8667] },
     sports: [
-      { name: 'badminton', courts: 6, pricePerHour: 350, maxPlayers: 4 },
-      { name: 'table-tennis', courts: 4, pricePerHour: 180, maxPlayers: 2 },
-      { name: 'volleyball', courts: 2, pricePerHour: 450, maxPlayers: 12 },
+      { name: 'badminton', courts: 3, pricePerHour: 260, maxPlayers: 4 },
+      { name: 'table-tennis', courts: 4, pricePerHour: 180, maxPlayers: 4 },
+      { name: 'volleyball', courts: 1, pricePerHour: 350, maxPlayers: 12 },
     ],
-    amenities: ['parking', 'changing-rooms', 'cafeteria', 'first-aid', 'floodlights', 'drinking-water'],
-    owner: ownerIds[0],
-    rating: 4.5,
-    totalReviews: 167,
+    amenities: ['parking', 'changing-rooms', 'cafeteria', 'coaching', 'drinking-water', 'floodlights'],
+    rating: 4.5, totalReviews: 33,
     operatingHours: { open: '06:00', close: '22:00' },
-    contactPhone: '9876540007',
-    contactEmail: 'mahanagar.sports@playsphere.in',
+    contactPhone: '9876501007', contactEmail: 'mahanagar@playsphere.in',
   },
   {
     name: 'Rajajipuram Cricket Academy',
-    description: 'Professional cricket academy with net practice facilities, bowling machines, and expert coaching for budding cricketers.',
-    address: 'Block D, Rajajipuram, Lucknow',
-    area: 'Rajajipuram',
-    city: 'Lucknow',
-    location: { type: 'Point', coordinates: [80.9150, 26.8300] },
+    description: 'Dedicated cricket academy with turf pitches, bowling machines, video analysis, and professional coaching for all skill levels.',
+    address: 'Rajajipuram Block C, Lucknow',
+    area: 'Rajajipuram', city: 'Lucknow',
+    location: { type: 'Point', coordinates: [80.8962, 26.8367] },
     sports: [
       { name: 'cricket', courts: 3, pricePerHour: 700, maxPlayers: 22 },
     ],
-    amenities: ['parking', 'coaching', 'equipment-rental', 'changing-rooms', 'first-aid', 'drinking-water'],
-    owner: ownerIds[1],
-    rating: 4.6,
-    totalReviews: 88,
-    operatingHours: { open: '05:00', close: '21:00' },
-    contactPhone: '9876540008',
-    contactEmail: 'rajajipuram.cricket@playsphere.in',
+    amenities: ['parking', 'changing-rooms', 'coaching', 'equipment-rental', 'floodlights', 'seating-area', 'drinking-water'],
+    rating: 4.6, totalReviews: 41,
+    operatingHours: { open: '06:00', close: '21:00' },
+    contactPhone: '9876501008', contactEmail: 'rajajipuram@playsphere.in',
   },
   {
     name: 'Eldeco Badminton Academy',
-    description: 'Specialized badminton academy with BWF-standard synthetic courts, LED lighting and high-performance coaching programs.',
-    address: 'Eldeco Colony, Lucknow',
-    area: 'Eldeco',
-    city: 'Lucknow',
-    location: { type: 'Point', coordinates: [80.9850, 26.8000] },
+    description: 'Elite badminton academy in Eldeco with BWF-standard courts, professional coaching, and regular tournaments. Highest rated in Lucknow.',
+    address: 'Eldeco Greens, Lucknow',
+    area: 'Eldeco', city: 'Lucknow',
+    location: { type: 'Point', coordinates: [80.9762, 26.8167] },
     sports: [
-      { name: 'badminton', courts: 8, pricePerHour: 450, maxPlayers: 4 },
+      { name: 'badminton', courts: 6, pricePerHour: 350, maxPlayers: 4 },
     ],
-    amenities: ['parking', 'ac', 'changing-rooms', 'showers', 'coaching', 'equipment-rental', 'cafeteria'],
-    owner: ownerIds[0],
-    rating: 4.9,
-    totalReviews: 245,
-    operatingHours: { open: '06:00', close: '23:00' },
-    contactPhone: '9876540009',
-    contactEmail: 'eldeco.badminton@playsphere.in',
+    amenities: ['parking', 'changing-rooms', 'showers', 'cafeteria', 'coaching', 'equipment-rental', 'ac', 'floodlights'],
+    rating: 4.9, totalReviews: 87,
+    operatingHours: { open: '05:30', close: '23:00' },
+    contactPhone: '9876501009', contactEmail: 'eldeco@playsphere.in',
   },
   {
-    name: 'Vikas Nagar Football & Basketball Arena',
-    description: 'Multi-purpose arena featuring football turf and basketball courts, perfect for team sports and tournaments.',
-    address: 'Sector 12, Vikas Nagar, Lucknow',
-    area: 'Vikas Nagar',
-    city: 'Lucknow',
-    location: { type: 'Point', coordinates: [80.9350, 26.9000] },
+    name: 'Vikas Nagar Sports Arena',
+    description: 'Affordable multi-sport facility in Vikas Nagar with football turf and basketball courts. Great for casual games and weekend tournaments.',
+    address: 'Vikas Nagar Sector 4, Lucknow',
+    area: 'Vikas Nagar', city: 'Lucknow',
+    location: { type: 'Point', coordinates: [81.0162, 26.8967] },
     sports: [
-      { name: 'football', courts: 1, pricePerHour: 1000, maxPlayers: 22 },
-      { name: 'basketball', courts: 2, pricePerHour: 600, maxPlayers: 10 },
+      { name: 'football', courts: 1, pricePerHour: 900, maxPlayers: 22 },
+      { name: 'basketball', courts: 1, pricePerHour: 450, maxPlayers: 10 },
     ],
-    amenities: ['parking', 'floodlights', 'changing-rooms', 'first-aid', 'seating-area'],
-    owner: ownerIds[1],
-    rating: 4.2,
-    totalReviews: 72,
+    amenities: ['parking', 'floodlights', 'drinking-water', 'first-aid'],
+    rating: 4.2, totalReviews: 15,
     operatingHours: { open: '06:00', close: '22:00' },
-    contactPhone: '9876540010',
-    contactEmail: 'vikasnagar.arena@playsphere.in',
+    contactPhone: '9876501010', contactEmail: 'vikasnagar@playsphere.in',
   },
   {
     name: 'Sahara Sports Village',
-    description: 'Sprawling sports village with 15+ facilities, from cricket to squash, a favorite for corporate tournaments and weekend leagues.',
-    address: 'Sahara Estate, Lucknow',
-    area: 'Sahara',
-    city: 'Lucknow',
-    location: { type: 'Point', coordinates: [80.9050, 26.8200] },
+    description: 'Massive sports complex near Sahara with cricket, football, squash, and tennis. One of the largest multi-sport venues in Lucknow.',
+    address: 'Sahara City Homes, Lucknow',
+    area: 'Sahara', city: 'Lucknow',
+    location: { type: 'Point', coordinates: [80.9662, 26.7967] },
     sports: [
       { name: 'cricket', courts: 2, pricePerHour: 900, maxPlayers: 22 },
-      { name: 'football', courts: 1, pricePerHour: 1100, maxPlayers: 22 },
-      { name: 'squash', courts: 3, pricePerHour: 500, maxPlayers: 2 },
-      { name: 'tennis', courts: 2, pricePerHour: 600, maxPlayers: 4 },
+      { name: 'football', courts: 2, pricePerHour: 1100, maxPlayers: 22 },
+      { name: 'squash', courts: 3, pricePerHour: 400, maxPlayers: 2 },
+      { name: 'tennis', courts: 4, pricePerHour: 550, maxPlayers: 4 },
     ],
-    amenities: ['parking', 'changing-rooms', 'showers', 'cafeteria', 'first-aid', 'coaching', 'floodlights', 'seating-area', 'wifi'],
-    owner: ownerIds[0],
-    rating: 4.7,
-    totalReviews: 319,
-    operatingHours: { open: '05:00', close: '23:00' },
-    contactPhone: '9876540011',
-    contactEmail: 'sahara.sports@playsphere.in',
+    amenities: ['parking', 'changing-rooms', 'showers', 'cafeteria', 'coaching', 'equipment-rental', 'floodlights', 'seating-area', 'first-aid', 'wifi'],
+    rating: 4.7, totalReviews: 74,
+    operatingHours: { open: '06:00', close: '23:00' },
+    contactPhone: '9876501011', contactEmail: 'sahara@playsphere.in',
   },
   {
-    name: 'Kapoorthala Squash & Racket Club',
-    description: 'Dedicated racket sports club with glass-backed squash courts, table tennis and a loyal community of racket sport enthusiasts.',
+    name: 'Kapoorthala Racket Club',
+    description: 'Specialist racket sports club in Kapoorthala with squash, table tennis, and badminton. Known for competitive leagues and coaching.',
     address: 'Kapoorthala Complex, Lucknow',
-    area: 'Kapoorthala',
-    city: 'Lucknow',
-    location: { type: 'Point', coordinates: [80.9420, 26.8480] },
+    area: 'Kapoorthala', city: 'Lucknow',
+    location: { type: 'Point', coordinates: [80.9162, 26.8567] },
     sports: [
-      { name: 'squash', courts: 4, pricePerHour: 450, maxPlayers: 2 },
-      { name: 'table-tennis', courts: 6, pricePerHour: 200, maxPlayers: 2 },
-      { name: 'badminton', courts: 3, pricePerHour: 380, maxPlayers: 4 },
+      { name: 'squash', courts: 4, pricePerHour: 380, maxPlayers: 2 },
+      { name: 'table-tennis', courts: 5, pricePerHour: 200, maxPlayers: 4 },
+      { name: 'badminton', courts: 3, pricePerHour: 290, maxPlayers: 4 },
     ],
-    amenities: ['parking', 'ac', 'changing-rooms', 'showers', 'cafeteria', 'coaching', 'equipment-rental'],
-    owner: ownerIds[1],
-    rating: 4.4,
-    totalReviews: 104,
-    operatingHours: { open: '07:00', close: '22:00' },
-    contactPhone: '9876540012',
-    contactEmail: 'kapoorthala.racket@playsphere.in',
+    amenities: ['parking', 'changing-rooms', 'showers', 'coaching', 'equipment-rental', 'drinking-water', 'ac'],
+    rating: 4.4, totalReviews: 27,
+    operatingHours: { open: '06:00', close: '22:00' },
+    contactPhone: '9876501012', contactEmail: 'kapoorthala@playsphere.in',
   },
   {
     name: 'Aashiana Swimming & Wellness',
-    description: 'Serene wellness centre with an indoor heated pool, sauna, yoga studio and aqua aerobics sessions for all fitness levels.',
+    description: 'Premium aquatic and wellness centre in Aashiana with Olympic pool, gym, and yoga studio. Best swimming facility in south Lucknow.',
     address: 'Aashiana Colony, Lucknow',
-    area: 'Aashiana',
-    city: 'Lucknow',
-    location: { type: 'Point', coordinates: [80.9300, 26.8150] },
+    area: 'Aashiana', city: 'Lucknow',
+    location: { type: 'Point', coordinates: [80.9062, 26.8167] },
     sports: [
-      { name: 'swimming', courts: 1, pricePerHour: 350, maxPlayers: 15 },
-      { name: 'gym', courts: 1, pricePerHour: 120, maxPlayers: 25 },
+      { name: 'swimming', courts: 1, pricePerHour: 300, maxPlayers: 25 },
+      { name: 'gym', courts: 1, pricePerHour: 120, maxPlayers: 30 },
     ],
-    amenities: ['parking', 'ac', 'changing-rooms', 'showers', 'coaching', 'drinking-water', 'first-aid'],
-    owner: ownerIds[0],
-    rating: 4.5,
-    totalReviews: 131,
-    operatingHours: { open: '05:30', close: '21:30' },
-    contactPhone: '9876540013',
-    contactEmail: 'aashiana.wellness@playsphere.in',
+    amenities: ['parking', 'changing-rooms', 'showers', 'cafeteria', 'coaching', 'first-aid', 'ac', 'drinking-water'],
+    rating: 4.5, totalReviews: 39,
+    operatingHours: { open: '05:00', close: '21:30' },
+    contactPhone: '9876501013', contactEmail: 'aashiana@playsphere.in',
   },
   {
     name: 'Aminabad Basketball Court',
-    description: 'Outdoor and indoor basketball courts in central Lucknow, hosting regular 3v3 and 5v5 leagues for all skill levels.',
-    address: 'Near Aminabad Market, Lucknow',
-    area: 'Aminabad',
-    city: 'Lucknow',
-    location: { type: 'Point', coordinates: [80.9380, 26.8425] },
+    description: 'Community basketball court in Aminabad with professional flooring, scoreboards, and evening floodlights for night games.',
+    address: 'Aminabad Park Road, Lucknow',
+    area: 'Aminabad', city: 'Lucknow',
+    location: { type: 'Point', coordinates: [80.9262, 26.8467] },
     sports: [
-      { name: 'basketball', courts: 3, pricePerHour: 650, maxPlayers: 10 },
+      { name: 'basketball', courts: 2, pricePerHour: 400, maxPlayers: 10 },
     ],
-    amenities: ['parking', 'floodlights', 'drinking-water', 'seating-area', 'first-aid'],
-    owner: ownerIds[1],
-    rating: 4.1,
-    totalReviews: 57,
+    amenities: ['parking', 'floodlights', 'drinking-water', 'seating-area'],
+    rating: 4.1, totalReviews: 12,
     operatingHours: { open: '06:00', close: '22:00' },
-    contactPhone: '9876540014',
-    contactEmail: 'aminabad.basketball@playsphere.in',
+    contactPhone: '9876501014', contactEmail: 'aminabad@playsphere.in',
   },
   {
     name: 'Cantt Sports Ground',
-    description: 'Historic cantonment sports ground with premium cricket and football facilities, maintained to military precision standards.',
+    description: 'Well-maintained sports ground in the Cantonment area with cricket and football facilities. Popular with defence personnel and families.',
     address: 'Cantonment Area, Lucknow',
-    area: 'Cantt',
-    city: 'Lucknow',
-    location: { type: 'Point', coordinates: [80.9580, 26.8280] },
+    area: 'Cantt', city: 'Lucknow',
+    location: { type: 'Point', coordinates: [80.9362, 26.8267] },
     sports: [
-      { name: 'cricket', courts: 1, pricePerHour: 1000, maxPlayers: 22 },
-      { name: 'football', courts: 1, pricePerHour: 1300, maxPlayers: 22 },
+      { name: 'cricket', courts: 2, pricePerHour: 650, maxPlayers: 22 },
+      { name: 'football', courts: 1, pricePerHour: 1000, maxPlayers: 22 },
     ],
-    amenities: ['parking', 'changing-rooms', 'first-aid', 'seating-area', 'coaching', 'drinking-water'],
-    owner: ownerIds[0],
-    rating: 4.6,
-    totalReviews: 143,
-    operatingHours: { open: '06:00', close: '20:00' },
-    contactPhone: '9876540015',
-    contactEmail: 'cantt.sports@playsphere.in',
+    amenities: ['parking', 'changing-rooms', 'floodlights', 'seating-area', 'drinking-water', 'first-aid'],
+    rating: 4.6, totalReviews: 31,
+    operatingHours: { open: '06:00', close: '21:00' },
+    contactPhone: '9876501015', contactEmail: 'cantt@playsphere.in',
   },
 ];
 
-async function seedData() {
+const USERS = [
+  {
+    username: 'arjun_striker',
+    email: 'arjun@playsphere.in',
+    password: 'password123',
+    role: 'user',
+    phone: '9876500001',
+    preferredSports: ['football', 'cricket'],
+    skillLevel: 'intermediate',
+    isApproved: true, isActive: true,
+  },
+  {
+    username: 'priya_smash',
+    email: 'priya@playsphere.in',
+    password: 'password123',
+    role: 'user',
+    phone: '9876500002',
+    preferredSports: ['badminton', 'swimming'],
+    skillLevel: 'advanced',
+    isApproved: true, isActive: true,
+  },
+  {
+    username: 'rahul_venues',
+    email: 'rahul@playsphere.in',
+    password: 'password123',
+    role: 'venue_owner',
+    phone: '9876500003',
+    preferredSports: [],
+    skillLevel: 'intermediate',
+    isApproved: true, isActive: true,
+  },
+  {
+    username: 'sneha_player',
+    email: 'sneha@playsphere.in',
+    password: 'password123',
+    role: 'user',
+    phone: '9876500004',
+    preferredSports: ['tennis', 'basketball'],
+    skillLevel: 'beginner',
+    isApproved: true, isActive: true,
+  },
+  {
+    username: 'vikram_sports',
+    email: 'vikram@playsphere.in',
+    password: 'password123',
+    role: 'user',
+    phone: '9876500005',
+    preferredSports: ['cricket', 'badminton', 'squash'],
+    skillLevel: 'professional',
+    isApproved: true, isActive: true,
+  },
+];
+
+const REVIEWS = [
+  { venueIdx: 0, userIdx: 0, rating: 5, comment: 'Best badminton courts in Lucknow! Excellent flooring and lighting.' },
+  { venueIdx: 0, userIdx: 1, rating: 4, comment: 'Great facility, staff is helpful. Parking can be tight on weekends.' },
+  { venueIdx: 1, userIdx: 0, rating: 5, comment: 'Amazing cricket ground. The pitch is well-maintained and coaching is top-notch.' },
+  { venueIdx: 1, userIdx: 4, rating: 4, comment: 'Good ground but booking process could be smoother. PlaySphere made it easy!' },
+  { venueIdx: 2, userIdx: 0, rating: 5, comment: 'Best football turf in Indira Nagar. Artificial grass is FIFA quality.' },
+  { venueIdx: 2, userIdx: 3, rating: 5, comment: 'Loved the floodlights for night games. Will definitely come back!' },
+  { venueIdx: 3, userIdx: 1, rating: 5, comment: 'Olympic-size pool with crystal clear water. Coaching is excellent.' },
+  { venueIdx: 4, userIdx: 3, rating: 4, comment: 'Good tennis courts. Slightly expensive but worth it for the quality.' },
+  { venueIdx: 5, userIdx: 4, rating: 4, comment: 'Solid basketball courts. Gym equipment is modern and well-maintained.' },
+  { venueIdx: 8, userIdx: 1, rating: 5, comment: 'Eldeco is simply the best badminton academy in Lucknow. Period.' },
+  { venueIdx: 8, userIdx: 4, rating: 5, comment: 'Professional-grade courts, excellent coaching. Worth every rupee.' },
+  { venueIdx: 10, userIdx: 0, rating: 5, comment: 'Sahara Sports Village is massive! Great for all sports under one roof.' },
+];
+
+async function seed() {
   try {
     await connectDB();
-
-    console.log('🌱 Starting PlaySphere database seed...\n');
+    console.log('\n🌱 Starting PlaySphere database seed...\n');
 
     // Clear existing data
     await Promise.all([
@@ -359,88 +316,25 @@ async function seedData() {
       Booking.deleteMany({}),
       Review.deleteMany({}),
     ]);
-    console.log('🗑️  Cleared existing data\n');
+    console.log('🗑️  Cleared existing data');
 
-    // Create users
-    const createdUsers = await User.create(users);
-    console.log(`✅ Created ${createdUsers.length} users`);
-
-    // Map roles to user IDs for venue owners
-    const owners = createdUsers.filter((u) => u.role === 'venue_owner' || u.role === 'admin');
-    const ownerIds = [owners[0]._id, owners[1]._id];
-
-    // Create venues
-    const venueData = getVenues(ownerIds);
-    const createdVenues = await Venue.create(venueData);
-    console.log(`✅ Created ${createdVenues.length} venues in Lucknow`);
-
-    // Create sample reviews
-    const regularUsers = createdUsers.filter((u) => u.role === 'user');
-    const reviewData = [];
-
-    createdVenues.slice(0, 6).forEach((venue, vi) => {
-      regularUsers.forEach((user, ui) => {
-        reviewData.push({
-          user: user._id,
-          venue: venue._id,
-          rating: 4 + Math.floor(Math.random() * 2),
-          comment: [
-            'Excellent facilities and very well maintained!',
-            'Great experience, will definitely come back.',
-            'Loved the amenities and professional staff.',
-            'Best sports complex in Lucknow!',
-          ][ui % 4],
-        });
-      });
+    // Create ONLY admin/superuser
+    const adminUser = await User.create({
+      username: 'playsphere_admin',
+      email: 'admin@playsphere.in',
+      password: 'admin123',
+      role: 'admin',
+      phone: '9876543210',
+      isApproved: true,
+      isActive: true,
     });
-
-    // Skip Review model's post-save hook during seeding by inserting directly
-    await Review.insertMany(reviewData);
-    console.log(`✅ Created ${reviewData.length} reviews`);
-
-    // Create sample bookings
-    const bookingData = [];
-    const sports = ['football', 'cricket', 'badminton', 'tennis', 'swimming'];
-    const times = ['08:00', '10:00', '14:00', '17:00', '19:00'];
-
-    for (let i = 0; i < 30; i++) {
-      const venue = createdVenues[i % createdVenues.length];
-      const user = regularUsers[i % regularUsers.length];
-      const date = new Date();
-      date.setDate(date.getDate() + (i % 14) - 7);
-      date.setHours(0, 0, 0, 0);
-
-      const availableSport = venue.sports[0];
-      const startTime = times[i % times.length];
-      const startHour = parseInt(startTime.split(':')[0]);
-      const endTime = `${(startHour + 1).toString().padStart(2, '0')}:00`;
-
-      bookingData.push({
-        user: user._id,
-        venue: venue._id,
-        sport: availableSport.name,
-        court: 1,
-        date,
-        startTime,
-        endTime,
-        duration: 1,
-        totalPrice: availableSport.pricePerHour,
-        playerCount: Math.floor(Math.random() * 4) + 1,
-        status: i < 20 ? 'confirmed' : i < 25 ? 'completed' : 'cancelled',
-        paymentStatus: i < 20 ? 'paid' : 'pending',
-        isAgentBooked: i % 3 === 0,
-      });
-    }
-
-    await Booking.insertMany(bookingData);
-    console.log(`✅ Created ${bookingData.length} sample bookings`);
+    console.log('✅ Admin user created');
 
     console.log('\n═══════════════════════════════════════════');
-    console.log('🎉 PlaySphere seed complete!');
-    console.log('\n📋 Demo Credentials:');
+    console.log('🎉 PlaySphere seed complete!\n');
+    console.log('📋 Superuser Credentials:');
     console.log('   Admin:       admin@playsphere.in       / admin123');
-    console.log('   Venue Owner: rahul@playsphere.in       / password123');
-    console.log('   Player:      arjun@playsphere.in       / password123');
+    console.log('\n💡 All other data (users, venues, bookings) will be created dynamically by users.');
     console.log('═══════════════════════════════════════════\n');
 
     process.exit(0);
@@ -450,4 +344,4 @@ async function seedData() {
   }
 }
 
-seedData();
+seed();

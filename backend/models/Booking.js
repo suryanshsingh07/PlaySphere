@@ -1,4 +1,4 @@
-const mongoose = require('../config/mongooseMock');
+const mongoose = require('mongoose');
 
 const BookingSchema = new mongoose.Schema({
   user: {
@@ -65,10 +65,24 @@ const BookingSchema = new mongoose.Schema({
     type: String,
     default: '',
   },
+  ticketNumber: {
+    type: String,
+    unique: true,
+  },
 }, { timestamps: true });
 
 // Index for querying bookings by venue and date (for slot availability)
 BookingSchema.index({ venue: 1, date: 1, status: 1 });
 BookingSchema.index({ user: 1, status: 1 });
+
+// Pre-save hook to generate a unique ticket number
+BookingSchema.pre('save', function (next) {
+  if (!this.ticketNumber) {
+    const dateStr = new Date(this.date || new Date()).toISOString().slice(0, 10).replace(/-/g, '');
+    const randomStr = Math.random().toString(36).substring(2, 8).toUpperCase();
+    this.ticketNumber = `TKT-${dateStr}-${randomStr}`;
+  }
+  next();
+});
 
 module.exports = mongoose.model('Booking', BookingSchema);

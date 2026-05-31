@@ -4,7 +4,8 @@ import { useAuth } from '../App';
 import {
   BarChart3, TrendingUp, Calendar, DollarSign, Star, Sparkles,
   Loader, RefreshCw, Layers, Activity, Users, Clock, Zap,
-  ArrowUpRight, ArrowDownRight, Trophy, Target, PieChart, Eye
+  ArrowUpRight, ArrowDownRight, Trophy, Target, PieChart, Eye,
+  Plus, Trash2, ShieldCheck, Mail, Phone, MapPin
 } from 'lucide-react';
 
 /* ── SVG Bar Chart ───────────────────────────────────────── */
@@ -267,6 +268,134 @@ export default function Dashboard() {
   const [pricingSuggestions, setPricingSuggestions] = useState([]);
   const [loadingPricing, setLoadingPricing] = useState(false);
 
+  // Add Venue Form state
+  const [venueName, setVenueName] = useState('');
+  const [venueDesc, setVenueDesc] = useState('');
+  const [venueAddress, setVenueAddress] = useState('');
+  const [venueArea, setVenueArea] = useState('Gomti Nagar');
+  const [areaOptions, setAreaOptions] = useState([]);
+  useEffect(() => {
+    axios.get('/api/venues/meta').then(res => {
+      if (res.data.success) setAreaOptions(res.data.data.areas);
+    }).catch(() => {});
+  }, []);
+  const [venueLng, setVenueLng] = useState(80.9933);
+  const [venueLat, setVenueLat] = useState(26.8554);
+  const [venueOpen, setVenueOpen] = useState('06:00');
+  const [venueClose, setVenueClose] = useState('23:00');
+  const [venuePhone, setVenuePhone] = useState('');
+  const [venueEmail, setVenueEmail] = useState('');
+  const [venueImagesText, setVenueImagesText] = useState('');
+  
+  // Selected amenities
+  const [selectedAmenities, setSelectedAmenities] = useState([]);
+  
+  // Sports configuration list
+  const [venueSports, setVenueSports] = useState([
+    { name: 'badminton', courts: 2, pricePerHour: 300, maxPlayers: 4 }
+  ]);
+  
+  const [newSportName, setNewSportName] = useState('badminton');
+  const [newSportCourts, setNewSportCourts] = useState(1);
+  const [newSportPrice, setNewSportPrice] = useState(300);
+  const [newSportPlayers, setNewSportPlayers] = useState(4);
+  
+  const [submittingVenue, setSubmittingVenue] = useState(false);
+  const [venueSuccessMsg, setVenueSuccessMsg] = useState(null);
+  const [venueErrorMsg, setVenueErrorMsg] = useState(null);
+
+  const handleAddSportConfig = () => {
+    if (venueSports.some(s => s.name === newSportName)) {
+      alert('This sport configuration is already added.');
+      return;
+    }
+    setVenueSports([...venueSports, {
+      name: newSportName,
+      courts: newSportCourts,
+      pricePerHour: newSportPrice,
+      maxPlayers: newSportPlayers
+    }]);
+  };
+
+  const handleRemoveSportConfig = (name) => {
+    setVenueSports(venueSports.filter(s => s.name !== name));
+  };
+
+  const handleAmenityToggle = (amenity) => {
+    if (selectedAmenities.includes(amenity)) {
+      setSelectedAmenities(selectedAmenities.filter(a => a !== amenity));
+    } else {
+      setSelectedAmenities([...selectedAmenities, amenity]);
+    }
+  };
+
+  const handleAddVenueSubmit = async (e) => {
+    e.preventDefault();
+    if (venueSports.length === 0) {
+      setVenueErrorMsg('Please add at least one sport configuration to your venue.');
+      return;
+    }
+    
+    setSubmittingVenue(true);
+    setVenueErrorMsg(null);
+    setVenueSuccessMsg(null);
+    
+    const imageUrls = venueImagesText.split(',')
+      .map(url => url.trim())
+      .filter(url => url.length > 0);
+      
+    const payload = {
+      name: venueName,
+      description: venueDesc,
+      address: venueAddress,
+      area: venueArea,
+      city: 'Lucknow',
+      location: {
+        type: 'Point',
+        coordinates: [parseFloat(venueLng), parseFloat(venueLat)]
+      },
+      sports: venueSports,
+      amenities: selectedAmenities,
+      operatingHours: {
+        open: venueOpen,
+        close: venueClose
+      },
+      contactPhone: venuePhone,
+      contactEmail: venueEmail,
+      images: imageUrls
+    };
+    
+    try {
+      const res = await axios.post('/api/venues', payload, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      
+      if (res.data.success) {
+        setVenueSuccessMsg('Venue added successfully! It will now appear on the explore map.');
+        setVenueName('');
+        setVenueDesc('');
+        setVenueAddress('');
+        setVenueArea('Gomti Nagar');
+        setVenueLng(80.9933);
+        setVenueLat(26.8554);
+        setVenueOpen('06:00');
+        setVenueClose('23:00');
+        setVenuePhone('');
+        setVenueEmail('');
+        setVenueImagesText('');
+        setSelectedAmenities([]);
+        setVenueSports([{ name: 'badminton', courts: 2, pricePerHour: 300, maxPlayers: 4 }]);
+        
+        fetchDashboardData();
+      }
+    } catch (err) {
+      console.error(err);
+      setVenueErrorMsg(err.response?.data?.message || 'Failed to create venue.');
+    } finally {
+      setSubmittingVenue(false);
+    }
+  };
+
   const fetchDashboardData = async () => {
     setLoading(true);
     setError(null);
@@ -307,7 +436,8 @@ export default function Dashboard() {
   };
 
   const handleUpdateStatus = async (bookingId, newStatus) => {
-    if (!window.confirm(`Are you sure you want to change the status of this booking to "${newStatus}"?`)) return;
+    const actionLabel = newStatus === 'confirmed' ? 'APPROVE' : 'REJECT';
+    if (!window.confirm(`Are you sure you want to ${actionLabel} this booking?`)) return;
 
     try {
       const res = await axios.put(
@@ -332,7 +462,12 @@ export default function Dashboard() {
     return (
       <div className="container flex-center" style={{ minHeight: '60vh' }}>
         <div style={{ textAlign: 'center' }}>
-          <Loader size={40} className="spin text-gradient" style={{ animation: 'spin 1.5s linear infinite', margin: '0 auto 16px auto', display: 'block' }} />
+          <div className="uiverse-loader" style={{ marginBottom: '20px' }}>
+            <svg viewBox="0 0 120 120">
+              <circle className="dash" cx="60" cy="60" r="57" fill="none" stroke="var(--accent-primary)" strokeWidth="8" strokeLinecap="round" />
+              <circle className="spin" cx="60" cy="60" r="57" fill="none" stroke="var(--accent-secondary)" strokeWidth="8" strokeLinecap="round" />
+            </svg>
+          </div>
           <p style={{ color: 'var(--text-secondary)' }}>Aggregating revenue & booking analytics...</p>
         </div>
       </div>
@@ -366,6 +501,7 @@ export default function Dashboard() {
     { id: 'revenue', label: '💰 Revenue', icon: TrendingUp },
     { id: 'sports', label: '🏅 Sports', icon: PieChart },
     { id: 'pricing', label: '🤖 AI Pricing', icon: Sparkles },
+    { id: 'add_venue', label: '➕ Add Venue', icon: Plus },
   ];
 
   return (
@@ -393,7 +529,7 @@ export default function Dashboard() {
       </div>
 
       {/* ── KPI Cards Grid ────────────────────────────── */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '16px', marginBottom: '28px' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(clamp(140px, 20vw, 220px), 1fr))', gap: 'clamp(12px, 2vw, 16px)', marginBottom: '28px' }}>
         <StatCard icon={Layers} label="My Arenas" value={overview.totalVenues}
           sub="Active venues registered" color="#06b6d4" bgColor="rgba(6,182,212,0.1)" />
         <StatCard icon={DollarSign} label="Total Revenue"
@@ -427,13 +563,13 @@ export default function Dashboard() {
 
       {/* ── Overview Tab ──────────────────────────────── */}
       {activeTab === 'overview' && (
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px', marginBottom: '28px' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(clamp(150px, 40vw, 500px), 1fr))', gap: 'clamp(16px, 2vw, 24px)', marginBottom: '28px' }}>
           {/* Quick Stats */}
           <div className="glass" style={{ padding: '24px', borderRadius: 'var(--radius-lg)', gridColumn: '1 / -1' }}>
             <h3 style={{ fontFamily: 'var(--font-display)', fontSize: '1.1rem', fontWeight: 700, marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '8px' }}>
               <Zap size={16} style={{ color: 'var(--accent-primary)' }} /> Platform Health
             </h3>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '16px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(clamp(100px, 18vw, 160px), 1fr))', gap: 'clamp(12px, 2vw, 16px)' }}>
               {[
                 { label: 'Booking Rate', value: `${overview.totalBookings > 0 ? Math.round((overview.totalBookings / (overview.totalVenues * 30)) * 100) : 0}%`, desc: 'Of capacity used', color: '#06b6d4' },
                 { label: 'AI Efficiency', value: `${overview.aiBookingPercentage}%`, desc: 'Bookings via AI', color: '#8b5cf6' },
@@ -550,7 +686,7 @@ export default function Dashboard() {
       {/* ── Sports Tab ────────────────────────────────── */}
       {activeTab === 'sports' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '24px', marginBottom: '28px' }}>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(clamp(150px, 40vw, 500px), 1fr))', gap: 'clamp(16px, 2vw, 24px)' }}>
             <div className="glass" style={{ padding: '24px', borderRadius: 'var(--radius-lg)' }}>
               <h3 style={{ fontFamily: 'var(--font-display)', fontSize: '1.1rem', fontWeight: 700, marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <PieChart size={16} style={{ color: 'var(--accent-tertiary)' }} /> Sport Distribution
@@ -621,7 +757,7 @@ export default function Dashboard() {
                         {suggestion.demandLevel} demand
                       </span>
                     </div>
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '12px' }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(clamp(100px, 18vw, 140px), 1fr))', gap: '12px' }}>
                       {[
                         { label: '🌅 Peak Hours', sub: '5–9 PM', price: suggestion.suggestedPricing?.peakHours?.price, color: '#f59e0b' },
                         { label: '🌙 Off-Peak', sub: '6 AM–12 PM', price: suggestion.suggestedPricing?.offPeakHours?.price, color: '#10b981' },
@@ -640,6 +776,317 @@ export default function Dashboard() {
                 ))}
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* ── Add Venue Tab ──────────────────────────────── */}
+      {activeTab === 'add_venue' && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '24px', marginBottom: '28px' }}>
+          <div className="glass" style={{ padding: '28px', borderRadius: 'var(--radius-lg)' }}>
+            <h3 style={{ fontFamily: 'var(--font-display)', fontSize: '1.25rem', fontWeight: 700, marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <Plus size={18} style={{ color: 'var(--accent-primary)' }} /> Register New Sports Venue
+            </h3>
+
+            {venueSuccessMsg && (
+              <div className="alert alert-success" style={{ background: 'rgba(16, 185, 129, 0.12)', border: '1px solid rgba(16, 185, 129, 0.25)', color: '#10b981', padding: '12px 16px', borderRadius: 'var(--radius-sm)', marginBottom: '20px', fontSize: '0.85rem' }}>
+                {venueSuccessMsg}
+              </div>
+            )}
+
+            {venueErrorMsg && (
+              <div className="alert alert-danger" style={{ padding: '12px 16px', borderRadius: 'var(--radius-sm)', marginBottom: '20px', fontSize: '0.85rem' }}>
+                {venueErrorMsg}
+              </div>
+            )}
+
+            <form onSubmit={handleAddVenueSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+              
+              {/* Row 1: Venue Name & Area */}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(clamp(150px, 25vw, 240px), 1fr))', gap: 'clamp(16px, 2vw, 20px)' }}>
+                <div className="form-group" style={{ marginBottom: 0 }}>
+                  <label className="form-label">Venue Name</label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="e.g. Gomti Arena Turf"
+                    className="form-input"
+                    value={venueName}
+                    onChange={e => setVenueName(e.target.value)}
+                  />
+                </div>
+                <div className="form-group" style={{ marginBottom: 0 }}>
+                  <label className="form-label">Lucknow Area</label>
+                  <select
+                    className="form-select"
+                    value={venueArea}
+                    onChange={e => setVenueArea(e.target.value)}
+                  >
+                    {areaOptions.map((area) => (
+                      <option key={area} value={area}>{area}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              {/* Row 2: Address */}
+              <div className="form-group">
+                <label className="form-label">Full Address</label>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g. Sector 8, Near Central Park, Gomti Nagar"
+                  className="form-input"
+                  value={venueAddress}
+                  onChange={e => setVenueAddress(e.target.value)}
+                />
+              </div>
+
+              {/* Row 3: Description */}
+              <div className="form-group">
+                <label className="form-label">Description / Bio</label>
+                <textarea
+                  placeholder="Tell athletes about your courts, pitch condition, features..."
+                  className="form-input"
+                  rows="3"
+                  value={venueDesc}
+                  onChange={e => setVenueDesc(e.target.value)}
+                  style={{ resize: 'none' }}
+                />
+              </div>
+
+              {/* Row 4: Coordinates (Longitude & Latitude) */}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(clamp(150px, 40vw, 500px), 1fr))', gap: '20px' }}>
+                <div className="form-group" style={{ marginBottom: 0 }}>
+                  <label className="form-label">Latitude (e.g. 26.8554)</label>
+                  <input
+                    type="number"
+                    step="0.000001"
+                    required
+                    placeholder="26.8554"
+                    className="form-input"
+                    value={venueLat}
+                    onChange={e => setVenueLat(parseFloat(e.target.value) || '')}
+                  />
+                </div>
+                <div className="form-group" style={{ marginBottom: 0 }}>
+                  <label className="form-label">Longitude (e.g. 80.9933)</label>
+                  <input
+                    type="number"
+                    step="0.000001"
+                    required
+                    placeholder="80.9933"
+                    className="form-input"
+                    value={venueLng}
+                    onChange={e => setVenueLng(parseFloat(e.target.value) || '')}
+                  />
+                </div>
+              </div>
+
+              {/* Row 5: Dynamic Sports Configuration Panel */}
+              <div className="glass" style={{ padding: '16px', borderRadius: 'var(--radius-md)', background: 'rgba(255,255,255,0.01)', border: '1px solid rgba(255,255,255,0.03)' }}>
+                <h4 style={{ fontSize: '0.9rem', fontWeight: 700, color: '#fff', marginBottom: '12px' }}>🏅 Configure Sports Fields</h4>
+                
+                {/* Sports List preview */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '16px' }}>
+                  {venueSports.map((sport) => (
+                    <div key={sport.name} className="flex-between" style={{ padding: '8px 12px', background: 'rgba(255,255,255,0.02)', borderRadius: 'var(--radius-sm)', border: '1px solid rgba(255,255,255,0.04)' }}>
+                      <div>
+                        <strong style={{ textTransform: 'capitalize', color: 'var(--accent-primary)' }}>{sport.name}</strong> · {sport.courts} Court(s) · ₹{sport.pricePerHour}/hr · Max {sport.maxPlayers} players
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveSportConfig(sport.name)}
+                        className="btn btn-ghost btn-xs"
+                        style={{ color: 'var(--accent-danger)' }}
+                      >
+                        <Trash2 size={12} />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Add dynamic sport form row */}
+                <div style={{ display: 'grid', gridTemplateColumns: 'clamp(auto, 1fr, 2fr) clamp(auto, 1fr, 1fr) clamp(auto, 1fr, 1fr) clamp(auto, 1fr, 1fr) auto', gap: 'clamp(8px, 2vw, 10px)', alignItems: 'end', flexWrap: 'wrap' }}>
+                  <div className="form-group" style={{ marginBottom: 0, minWidth: 0 }}>
+                    <label style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Sport</label>
+                    <select
+                      className="form-select"
+                      value={newSportName}
+                      onChange={e => setNewSportName(e.target.value)}
+                      style={{ padding: '8px 10px', fontSize: '0.8rem' }}
+                    >
+                      {['football', 'cricket', 'badminton', 'tennis', 'basketball', 'swimming', 'table-tennis', 'volleyball', 'squash', 'gym'].map(s => (
+                        <option key={s} value={s}>{s.charAt(0).toUpperCase() + s.slice(1)}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="form-group" style={{ marginBottom: 0 }}>
+                    <label style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Courts</label>
+                    <input
+                      type="number"
+                      min="1"
+                      className="form-input"
+                      value={newSportCourts}
+                      onChange={e => setNewSportCourts(parseInt(e.target.value) || 1)}
+                      style={{ padding: '8px 10px', fontSize: '0.8rem' }}
+                    />
+                  </div>
+                  <div className="form-group" style={{ marginBottom: 0 }}>
+                    <label style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Price/hr</label>
+                    <input
+                      type="number"
+                      min="0"
+                      className="form-input"
+                      value={newSportPrice}
+                      onChange={e => setNewSportPrice(parseInt(e.target.value) || 0)}
+                      style={{ padding: '8px 10px', fontSize: '0.8rem' }}
+                    />
+                  </div>
+                  <div className="form-group" style={{ marginBottom: 0 }}>
+                    <label style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Max Players</label>
+                    <input
+                      type="number"
+                      min="1"
+                      className="form-input"
+                      value={newSportPlayers}
+                      onChange={e => setNewSportPlayers(parseInt(e.target.value) || 1)}
+                      style={{ padding: '8px 10px', fontSize: '0.8rem' }}
+                    />
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleAddSportConfig}
+                    className="btn btn-secondary btn-sm"
+                    style={{ padding: '10px 14px' }}
+                  >
+                    Add Sport
+                  </button>
+                </div>
+              </div>
+
+              {/* Row 6: Amenities Checklist */}
+              <div className="form-group">
+                <label className="form-label">Available Amenities</label>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '10px', marginTop: '6px' }}>
+                  {[
+                    { id: 'parking', label: '🚗 Free Parking' },
+                    { id: 'changing-rooms', label: '👕 Changing Rooms' },
+                    { id: 'showers', label: '🚿 Hot Showers' },
+                    { id: 'cafeteria', label: '☕ Cafeteria' },
+                    { id: 'first-aid', label: '🏥 First Aid Kit' },
+                    { id: 'wifi', label: '📶 High-Speed WiFi' },
+                    { id: 'floodlights', label: '💡 Night Floodlights' },
+                    { id: 'coaching', label: '🎓 Personal Coaching' },
+                    { id: 'equipment-rental', label: '🏸 Equipment Rental' },
+                    { id: 'drinking-water', label: '💧 Purified Water' },
+                    { id: 'seating-area', label: '🛋️ Seating Lounge' },
+                    { id: 'ac', label: '❄️ Air Conditioned' },
+                  ].map((amenity) => {
+                    const isChecked = selectedAmenities.includes(amenity.id);
+                    return (
+                      <label
+                        key={amenity.id}
+                        className="flex-center"
+                        style={{
+                          justifyContent: 'flex-start',
+                          gap: '8px',
+                          padding: '10px',
+                          background: isChecked ? 'rgba(6,182,212,0.06)' : 'rgba(255,255,255,0.01)',
+                          border: isChecked ? '1px solid rgba(6,182,212,0.3)' : '1px solid rgba(255,255,255,0.04)',
+                          borderRadius: 'var(--radius-sm)',
+                          fontSize: '0.8rem',
+                          cursor: 'pointer',
+                          color: isChecked ? '#fff' : 'var(--text-secondary)',
+                          transition: 'all 0.2s'
+                        }}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={isChecked}
+                          onChange={() => handleAmenityToggle(amenity.id)}
+                          style={{ accentColor: 'var(--accent-primary)' }}
+                        />
+                        <span>{amenity.label}</span>
+                      </label>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Row 7: Schedule Hours */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+                <div className="form-group" style={{ marginBottom: 0 }}>
+                  <label className="form-label">Operating Hours Open (e.g. 06:00)</label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="06:00"
+                    className="form-input"
+                    value={venueOpen}
+                    onChange={e => setVenueOpen(e.target.value)}
+                  />
+                </div>
+                <div className="form-group" style={{ marginBottom: 0 }}>
+                  <label className="form-label">Operating Hours Close (e.g. 23:00)</label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="23:00"
+                    className="form-input"
+                    value={venueClose}
+                    onChange={e => setVenueClose(e.target.value)}
+                  />
+                </div>
+              </div>
+
+              {/* Row 8: Contact Details */}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '20px' }}>
+                <div className="form-group" style={{ marginBottom: 0 }}>
+                  <label className="form-label">Contact Phone</label>
+                  <input
+                    type="tel"
+                    placeholder="e.g. 9876540001"
+                    className="form-input"
+                    value={venuePhone}
+                    onChange={e => setVenuePhone(e.target.value)}
+                  />
+                </div>
+                <div className="form-group" style={{ marginBottom: 0 }}>
+                  <label className="form-label">Contact Email</label>
+                  <input
+                    type="email"
+                    placeholder="e.g. gomtisports@playsphere.in"
+                    className="form-input"
+                    value={venueEmail}
+                    onChange={e => setVenueEmail(e.target.value)}
+                  />
+                </div>
+              </div>
+
+              {/* Row 9: Image URLs */}
+              <div className="form-group">
+                <label className="form-label">Image URLs (comma-separated)</label>
+                <input
+                  type="text"
+                  placeholder="e.g. https://image1.jpg, https://image2.jpg"
+                  className="form-input"
+                  value={venueImagesText}
+                  onChange={e => setVenueImagesText(e.target.value)}
+                />
+                <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: '4px', display: 'block' }}>Provide absolute image links. Leave empty to auto-assign a professional sport graphic fallback.</span>
+              </div>
+
+              <button
+                type="submit"
+                disabled={submittingVenue}
+                className="btn btn-primary"
+                style={{ width: '100%', marginTop: '10px' }}
+              >
+                {submittingVenue ? 'Registering Venue...' : 'Register Venue'}
+              </button>
+
+            </form>
           </div>
         </div>
       )}
@@ -699,23 +1146,38 @@ export default function Dashboard() {
                       </td>
                       <td style={{ padding: '13px 12px' }}>
                         <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
-                          {booking.status !== 'confirmed' && booking.status !== 'completed' && (
-                            <button
-                              onClick={(e) => { e.stopPropagation(); handleUpdateStatus(booking._id, 'confirmed'); }}
-                              className="btn btn-emerald btn-xs"
-                              style={{ cursor: 'pointer' }}
-                            >
-                              Confirm
-                            </button>
+                          {booking.status === 'pending' && (
+                            <>
+                              <button
+                                onClick={(e) => { e.stopPropagation(); handleUpdateStatus(booking._id, 'confirmed'); }}
+                                className="btn btn-emerald btn-xs"
+                                style={{ cursor: 'pointer' }}
+                              >
+                                Approve
+                              </button>
+                              <button
+                                onClick={(e) => { e.stopPropagation(); handleUpdateStatus(booking._id, 'cancelled'); }}
+                                className="btn btn-danger btn-xs"
+                                style={{ cursor: 'pointer' }}
+                              >
+                                Reject
+                              </button>
+                            </>
                           )}
-                          {booking.status !== 'cancelled' && booking.status !== 'completed' && (
-                            <button
-                              onClick={(e) => { e.stopPropagation(); handleUpdateStatus(booking._id, 'cancelled'); }}
-                              className="btn btn-danger btn-xs"
-                              style={{ cursor: 'pointer' }}
-                            >
-                              Cancel
-                            </button>
+                          {booking.status === 'confirmed' && (
+                            <div style={{ display: 'flex', gap: '6px' }}>
+                              <span style={{ fontSize: '0.75rem', color: '#10b981', fontWeight: 600, display: 'flex', alignItems: 'center' }}>Approved</span>
+                              <button
+                                onClick={(e) => { e.stopPropagation(); handleUpdateStatus(booking._id, 'cancelled'); }}
+                                className="btn btn-danger btn-xs"
+                                style={{ cursor: 'pointer' }}
+                              >
+                                Reject
+                              </button>
+                            </div>
+                          )}
+                          {booking.status === 'cancelled' && (
+                            <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>Rejected</span>
                           )}
                           {booking.status === 'completed' && (
                             <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>Completed</span>

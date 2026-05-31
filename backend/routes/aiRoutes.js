@@ -17,11 +17,11 @@ const { protect } = require('../middleware/authMiddleware');
  *   "Find football turf under ₹1200 near Chinhat"
  *   "Any cricket ground available Saturday morning?"
  */
-function parseUserIntent(message) {
+function parseUserIntent(message, dynamicAreas = [], dynamicSports = []) {
   const msg = message.toLowerCase();
 
   const intent = {
-    action: 'search', // search | book | recommend | info
+    action: 'search',
     sport: null,
     location: null,
     date: null,
@@ -39,15 +39,14 @@ function parseUserIntent(message) {
     intent.action = 'info';
   }
 
-  // Detect sport
-  const sports = ['football', 'cricket', 'badminton', 'tennis', 'basketball', 'swimming', 'table-tennis', 'volleyball', 'squash', 'gym'];
-  for (const sport of sports) {
+  // Detect sport from dynamic DB list, fallback to common aliases
+  const sportList = dynamicSports.length > 0 ? dynamicSports : ['football', 'cricket', 'badminton', 'tennis', 'basketball', 'swimming', 'table-tennis', 'volleyball', 'squash', 'gym'];
+  for (const sport of sportList) {
     if (msg.includes(sport)) {
       intent.sport = sport;
       break;
     }
   }
-  // Common aliases
   if (!intent.sport) {
     if (msg.includes('turf') || msg.includes('soccer')) intent.sport = 'football';
     if (msg.includes('shuttle') || msg.includes('shuttlecock')) intent.sport = 'badminton';
@@ -56,20 +55,14 @@ function parseUserIntent(message) {
     if (msg.includes('tt') || msg.includes('ping pong')) intent.sport = 'table-tennis';
   }
 
-  // Detect location / area
-  const areas = [
-    'gomti nagar', 'hazratganj', 'indira nagar', 'aliganj', 'chinhat',
-    'jankipuram', 'rajajipuram', 'mahanagar', 'alambagh', 'vikas nagar',
-    'eldeco', 'sahara', 'aashiana', 'faizabad road', 'sitapur road',
-    'kapoorthala', 'aminabad', 'charbagh', 'cantt', 'lucknow'
-  ];
-  for (const area of areas) {
+  // Detect location using dynamic areas from DB
+  for (const area of dynamicAreas) {
     if (msg.includes(area)) {
       intent.location = area;
       break;
     }
   }
-  // Generic "near" extraction
+  // Generic "near" extraction fallback
   if (!intent.location) {
     const nearMatch = msg.match(/near\s+([a-z\s]+?)(?:\s+(?:tomorrow|today|tonight|morning|evening|for|under|at|in|\d|$))/);
     if (nearMatch) {
@@ -206,14 +199,22 @@ function generateResponse(intent, venues, bookingResult) {
 // @access  Private
 router.post('/chat', protect, async (req, res) => {
   try {
-    const { message, context } = req.body;
+    const { message } = req.body;
 
     if (!message) {
       return res.status(400).json({ success: false, message: 'Please provide a message' });
     }
 
-    // Parse the user's natural language intent
-    const intent = parseUserIntent(message);
+    // Fetch dynamic areas and sports from DB for NLP matching
+    const [dbAreas, dbSports] = await Promise.all([
+      Venue.distinct('area', { isActive: true }),
+      Venue.distinct('sports.name', { isActive: true }),
+    ]);
+    const intent = parseUserIntent(
+      message,
+      dbAreas.filter(Boolean).map(a => a.toLowerCase()),
+      dbSports.filter(Boolean)
+    );
 
     // Build venue query from intent
     let query = { isActive: true };

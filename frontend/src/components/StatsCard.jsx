@@ -5,14 +5,14 @@ export default function StatsCard({ icon: Icon, value, label, description }) {
     <div 
       className="glass stats-card-wrapper"
       style={{
-        padding: '24px',
+        padding: 'clamp(16px, 4vw, 24px)',
         borderRadius: 'var(--radius-lg)',
         border: '1px solid var(--glass-border)',
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'center',
         textAlign: 'center',
-        gap: '12px',
+        gap: 'clamp(8px, 2vw, 12px)',
         transition: 'transform var(--transition-base), border-color var(--transition-base)',
         position: 'relative',
         overflow: 'hidden'
@@ -22,8 +22,10 @@ export default function StatsCard({ icon: Icon, value, label, description }) {
       <div 
         className="flex-center"
         style={{
-          width: '56px',
-          height: '56px',
+          width: 'clamp(44px, 8vw, 56px)',
+          height: 'clamp(44px, 8vw, 56px)',
+          minWidth: '44px',
+          minHeight: '44px',
           borderRadius: 'var(--radius-md)',
           background: 'rgba(6, 182, 212, 0.08)',
           color: 'var(--accent-primary)',
@@ -38,7 +40,7 @@ export default function StatsCard({ icon: Icon, value, label, description }) {
       <div 
         className="text-gradient"
         style={{
-          fontSize: '2.2rem',
+          fontSize: 'clamp(1.5rem, 5vw, 2.2rem)',
           fontWeight: 800,
           fontFamily: 'var(--font-display)',
           lineHeight: '1.2',

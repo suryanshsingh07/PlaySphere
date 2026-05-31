@@ -79,7 +79,7 @@ export default function VenueDetail() {
   const handleReviewSubmit = async (e) => {
     e.preventDefault();
     if (!isAuthenticated) {
-      navigate('/auth');
+      navigate('/login');
       return;
     }
 
@@ -117,7 +117,12 @@ export default function VenueDetail() {
     return (
       <div className="container flex-center" style={{ minHeight: '60vh' }}>
         <div style={{ textAlign: 'center' }}>
-          <Loader size={40} className="spin text-gradient" style={{ animation: 'spin 1.5s linear infinite', margin: '0 auto 16px auto', display: 'block' }} />
+          <div className="uiverse-loader" style={{ marginBottom: '20px' }}>
+            <svg viewBox="0 0 120 120">
+              <circle className="dash" cx="60" cy="60" r="57" fill="none" stroke="var(--accent-primary)" strokeWidth="8" strokeLinecap="round" />
+              <circle className="spin" cx="60" cy="60" r="57" fill="none" stroke="var(--accent-secondary)" strokeWidth="8" strokeLinecap="round" />
+            </svg>
+          </div>
           <p style={{ color: 'var(--text-secondary)' }}>Gathering venue coordinates and booking details...</p>
         </div>
       </div>
@@ -219,7 +224,7 @@ export default function VenueDetail() {
                 Book Court Now
               </button>
             ) : (
-              <Link to="/auth" className="btn btn-primary btn-lg">
+              <Link to="/login" className="btn btn-primary btn-lg">
                 Log In to Book
               </Link>
             )}
@@ -418,6 +423,31 @@ export default function VenueDetail() {
               </div>
             </div>
           </div>
+
+          {/* Owner details card */}
+          {venue.owner && (
+            <div className="glass" style={{ padding: '24px', borderRadius: 'var(--radius-lg)' }}>
+              <h3 style={{ fontFamily: 'var(--font-display)', fontSize: '1.1rem', fontWeight: 700, marginBottom: '16px' }}>
+                Posted By
+              </h3>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                <div className="flex-between" style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
+                  <span>Owner Username</span>
+                  <span style={{ fontWeight: 600, color: '#fff' }}>@{venue.owner.username}</span>
+                </div>
+                <div className="flex-between" style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: '10px' }}>
+                  <span>Owner Email</span>
+                  <span style={{ fontWeight: 600, color: '#fff', fontSize: '0.8rem' }}>{venue.owner.email}</span>
+                </div>
+                {venue.owner.phone && (
+                  <div className="flex-between" style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: '10px' }}>
+                    <span>Owner Phone</span>
+                    <span style={{ fontWeight: 600, color: '#fff' }}>{venue.owner.phone}</span>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
 
           {/* Micro Map */}
           <div>

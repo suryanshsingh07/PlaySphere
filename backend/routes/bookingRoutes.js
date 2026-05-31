@@ -67,7 +67,7 @@ router.post('/', protect, async (req, res) => {
       players: players || [],
       notes: notes || '',
       isAgentBooked: isAgentBooked || false,
-      status: 'confirmed',
+      status: 'pending',
       paymentStatus: 'pending',
     });
 
@@ -122,8 +122,24 @@ router.put('/:id/cancel', protect, async (req, res) => {
       return res.status(404).json({ success: false, message: 'Booking not found' });
     }
 
-    if (booking.user.toString() !== req.user._id.toString()) {
+    // Check if user is the booking owner or venue owner
+    const venue = await Venue.findById(booking.venue);
+    const isBookingOwner = booking.user.toString() === req.user._id.toString();
+    const isVenueOwner = venue && venue.owner.toString() === req.user._id.toString();
+    const isAdmin = req.user.role === 'admin';
+
+    if (!isBookingOwner && !isVenueOwner && !isAdmin) {
       return res.status(403).json({ success: false, message: 'Not authorized to cancel this booking' });
+    }
+
+    // User can only cancel pending bookings, but venue owner/admin can cancel any
+    if (isBookingOwner && !isVenueOwner && !isAdmin) {
+      if (booking.status !== 'pending') {
+        return res.status(400).json({ 
+          success: false, 
+          message: 'You can only cancel pending bookings. Contact venue owner for confirmed bookings.' 
+        });
+      }
     }
 
     if (booking.status === 'cancelled') {
@@ -223,6 +239,39 @@ router.put('/:id/status', protect, async (req, res) => {
     } else if (status === 'confirmed') {
       booking.paymentStatus = 'paid';
     }
+    await booking.save();
+
+    // Emit real-time update
+    if (req.app.get('io')) {
+      req.app.get('io').emit('booking:updated', {
+        venueId: booking.venue,
+        booking,
+      });
+    }
+
+    res.json({ success: true, data: booking });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// @desc    Process mock payment for a booking
+// @route   PUT /api/bookings/:id/pay
+// @access  Private
+router.put('/:id/pay', protect, async (req, res) => {
+  try {
+    const booking = await Booking.findById(req.params.id);
+    if (!booking) {
+      return res.status(404).json({ success: false, message: 'Booking not found' });
+    }
+    
+    // Verify user owns the booking
+    if (booking.user.toString() !== req.user._id.toString() && req.user.role !== 'admin') {
+      return res.status(403).json({ success: false, message: 'Not authorized to pay for this booking' });
+    }
+
+    booking.paymentStatus = 'paid';
+    booking.status = 'pending';
     await booking.save();
 
     // Emit real-time update

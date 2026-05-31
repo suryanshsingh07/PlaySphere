@@ -1,39 +1,25 @@
 <p align="center">
-  <img src="https://img.shields.io/badge/PlaySphere-AI%20Sports%20Copilot-06b6d4?style=for-the-badge&labelColor=0a0e1a&logo=data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCI+PHBhdGggZD0iTTEyIDJMMyAyMGgxOEwxMiAyeiIgZmlsbD0iIzA2YjZkNCIvPjwvc3ZnPg==" alt="PlaySphere Badge" />
+<img src="https://img.shields.io/badge/PlaySphere-AI%20Sports%20Copilot-06b6d4?style=for-the-badge&labelColor=0a0e1a&logo=data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCI+PHBhdGggZD0iTTEyIDJMMyAyMGgxOEwxMiAyeiIgZmlsbD0iIzA2YjZkNCIvPjwvc3ZnPg==" alt="PlaySphere Badge" />
 </p>
 
 <h1 align="center">🏟️ PlaySphere</h1>
 <h3 align="center">Agentic AI Sports Infrastructure Discovery & Booking Platform</h3>
 
 <p align="center">
-  <strong>Your Intelligent Sports Copilot — Find, Compare & Book Courts Using Natural Language</strong>
+<strong>Your Intelligent Sports Copilot — Find, Compare & Book Courts Using Natural Language</strong>
 </p>
 
-<p align="center">
-  <img src="https://img.shields.io/badge/Node.js-339933?style=flat-square&logo=nodedotjs&logoColor=white" />
-  <img src="https://img.shields.io/badge/React_18-61DAFB?style=flat-square&logo=react&logoColor=black" />
-  <img src="https://img.shields.io/badge/Firebase-DD2C00?style=flat-square&logo=firebase&logoColor=white" />
-  <img src="https://img.shields.io/badge/Socket.IO-010101?style=flat-square&logo=socketdotio&logoColor=white" />
-  <img src="https://img.shields.io/badge/Vite-646CFF?style=flat-square&logo=vite&logoColor=white" />
-  <img src="https://img.shields.io/badge/Leaflet-199900?style=flat-square&logo=leaflet&logoColor=white" />
-  <img src="https://img.shields.io/badge/JWT-000000?style=flat-square&logo=jsonwebtokens&logoColor=white" />
-  <img src="https://img.shields.io/badge/AI_Agents-8B5CF6?style=flat-square&logo=openai&logoColor=white" />
-  <img src="https://img.shields.io/badge/Hackathon-APL_2026-ec4899?style=flat-square&logo=hackthebox&logoColor=white" />
-</p>
+[![APL Finals 2026](https://img.shields.io/badge/APL_Finals-2026-blueviolet?style=for-the-badge)](https://github.com/devvikax/playsphere-ai)
+[![Next.js](https://img.shields.io/badge/Next.js-16-000000?style=for-the-badge&logo=nextdotjs&logoColor=white)](https://nextjs.org/)
+[![React](https://img.shields.io/badge/React-19-20232A?style=for-the-badge&logo=react&logoColor=61DAFB)](https://react.dev/)
+[![Firebase](https://img.shields.io/badge/Firebase-FFCA28?style=for-the-badge&logo=firebase&logoColor=black)](https://firebase.google.com/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-007ACC?style=for-the-badge&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
+[![Google Maps](https://img.shields.io/badge/Google_Maps-4285F4?style=for-the-badge&logo=googlemaps&logoColor=white)](https://developers.google.com/maps)
+[![AI Powered](https://img.shields.io/badge/AI_Powered-Concierge-emerald?style=for-the-badge&logo=openai&logoColor=white)](#ai-integration--intelligence-layer)
 
-<p align="center">
-  <a href="https://aiplaysphere.vercel.app/" target="_blank">
-    <img src="https://img.shields.io/badge/Live_Demo-Vercel-000000?style=for-the-badge&logo=vercel&logoColor=white" alt="Vercel Live Demo" />
-  </a>
-  <a href="https://aiplaysphere.netlify.app/" target="_blank">
-    <img src="https://img.shields.io/badge/Live_Demo-Netlify-00C7B7?style=for-the-badge&logo=netlify&logoColor=white" alt="Netlify Live Demo" />
-  </a>
-</p>
+---
 
-<p align="center">
-  🌐 <strong>Vercel Link:</strong> <a href="https://aiplaysphere.vercel.app/">https://aiplaysphere.vercel.app/</a> <br />
-  🌐 <strong>Netlify Link:</strong> <a href="https://aiplaysphere.netlify.app/">https://aiplaysphere.netlify.app/</a>
-</p>
+PlaySphere AI is a premium sports-tech and geographic intelligence platform specifically built for the Lucknow region to bridge the gap between fragmented sports facilities, venue owners, and players. By utilizing a hybrid real-time discovery engine (OpenStreetMap + Seed Ingestion + optional Google Places enrichment), a locality-aware grounded AI Concierge, and a secure Neo-Brutalist booking engine, PlaySphere AI delivers an end-to-end marketplace experience ready for Lucknow's growing sports community.
 
 <p align="center">
   <a href="#-problem-statement">Problem</a> •
@@ -54,413 +40,73 @@
 
 Organizing a game of football, badminton, or cricket is a **fragmented, frustrating experience**:
 
-- 🔍 Players manually search across multiple platforms and messaging groups for available venues
-- 📞 Coordination requires endless calls to venue managers to verify open slots
-- 💰 No transparent pricing — players can't easily compare rates or find budget-friendly options
-- 🗺️ No unified geographic search — discovering nearby facilities requires trial and error
-- 📊 Venue owners lack data-driven tools to optimize pricing, track demand, or manage bookings efficiently
-
-> **The sports infrastructure discovery and booking pipeline is broken — it needs an intelligent, agentic solution.**
-
-### The Gap We're Solving
-
-```mermaid
-graph LR
-    subgraph BEFORE["❌ Current Experience"]
-        B1[Search WhatsApp Groups] --> B2[Call 5+ Venues]
-        B2 --> B3[Check Availability Manually]
-        B3 --> B4[Negotiate Pricing]
-        B4 --> B5[Hope for Confirmation]
-    end
-
-    subgraph AFTER["✅ With PlaySphere"]
-        A1["'Book badminton 7 PM Gomti Nagar'"] --> A2["AI Parses → Searches → Books"]
-        A2 --> A3["✅ Confirmed in Seconds"]
-    end
-
-    BEFORE -.->|"PlaySphere Replaces"| AFTER
-
-    style BEFORE fill:#1a0000,stroke:#ef4444,color:#fca5a5
-    style AFTER fill:#001a0e,stroke:#10b981,color:#6ee7b7
-```
-
 ---
 
 ## 💡 Solution Overview
 
-**PlaySphere** is a full-stack, AI-powered sports venue discovery and booking platform that combines:
+PlaySphere AI addresses these regional gaps by introducing a secure, map-integrated, and AI-grounded sports venue ecosystem.
 
-| Capability | Description |
-| :--- | :--- |
-| 🤖 **AI Sports Copilot** | A conversational agentic AI that parses natural language queries, searches venues, compares prices, and books courts autonomously |
-| 🗺️ **Interactive Geo Map** | Real-time dark-themed Leaflet map with venue markers, area density overlays, and one-click booking popups |
-| ⚡ **Real-Time Booking Engine** | Live slot availability with Socket.IO push updates, conflict detection, and instant confirmation |
-| 📈 **Smart Pricing Agent** | Demand-aware dynamic pricing suggestions: peak hour surcharges, rainy day discounts, last-minute offers |
-| 📊 **Venue Owner Dashboard** | Business intelligence portal with SVG revenue charts, donut sport breakdowns, AI booking share metrics, sparkline trends, and customer reviews |
-| 🔐 **Role-Based Access** | JWT-secured authentication with three roles: Player, Venue Owner, and Platform Admin |
+*   **Hybrid Real-Time Ingestion**: Admins can trigger an automated crawler that queries the OpenStreetMap (OSM) Overpass API within Lucknow's coordinates to discover stadiums, halls, and pitches, filtering out invalid records and classifying sports automatically.
+*   **Locality-Aware Proximity AI**: A conversational assistant parses live Firestore data to recommend sports slots based on the user's distance and budget. The AI concierge applies proximity boosts so that matches closest to neighborhoods like Gomti Nagar or Hazratganj are prioritized.
+*   **Marketplace & Ownership Verification**: Discovered infrastructure is kept read-only and unbookable. Venue owners must register, submit verification credentials (payment details, UPI IDs, UTR records), and claim their venue. Once approved by an Admin, the venue opens for bookings.
+*   **Simulated Real-Time Bookings**: Players check real-time court availability, book morning/afternoon/evening slots, submit simulated transaction UPI numbers (UTR), and generate active tickets, keeping the marketplace secure and fully verified.
 
-### 🏆 What Makes PlaySphere Unique
-
-```
-User says: "Book badminton tomorrow 7 PM near Gomti Nagar under ₹500"
-
-PlaySphere AI Copilot:
-  ├── 🔍 Parses intent → Sport: badminton, Date: tomorrow, Time: 19:00, Area: Gomti Nagar, Budget: ₹500
-  ├── 🏟️ Queries database with geospatial + sport + price filters
-  ├── ⚡ Checks real-time slot availability across matching venues
-  ├── ✅ Books the best available court automatically
-  └── 📱 Returns confirmation with venue details, price, and time
-
-Result: TRUE AGENTIC AI — from natural language to confirmed booking in one step
-```
-
----
-
-## 📐 Architecture
-
-### System Architecture Diagram
-
-```mermaid
-graph TB
-    subgraph Client["🖥️ Frontend — React 18 + Vite"]
-        UI[Premium Glassmorphism UI]
-        MAP[Leaflet Dark Map Engine]
-        CHAT[AI Chat Widget]
-        BOOK[Booking Interface]
-        DASH[SVG Analytics Dashboard]
-    end
-    
-    subgraph Server["⚙️ Backend — Express + Socket.IO"]
-        API[REST API Gateway]
-        AUTH[JWT Auth Middleware]
-        RT[Real-Time Engine]
-        ADAPT[Mongoose-Compatible Adapter]
-    end
-    
-    subgraph Agents["🤖 AI Agent Layer"]
-        NLP[NLP Intent Parser]
-        REC[Recommendation Agent]
-        PRICE[Dynamic Pricing Agent]
-        DEMAND[Demand Prediction Agent]
-    end
-    
-    subgraph Data["🗄️ Data Layer — Firebase / Local JSON"]
-        USERS[(Users Collection)]
-        VENUES[(Venues + GeoJSON Index)]
-        BOOKINGS[(Bookings Collection)]
-        REVIEWS[(Reviews Collection)]
-    end
-    
-    Client -->|HTTP/WS| Server
-    Server -->|Query/Mutate| Data
-    Server -->|Invoke| Agents
-    Agents -->|Read/Write| Data
-    RT -->|Push Updates| Client
-```
-
-### Request Lifecycle — End-to-End Data Flow
-
-```mermaid
-flowchart LR
-    A["🏃 User Action"] --> B["🌐 React Frontend"]
-    B -->|Axios HTTP| C["⚙️ Express Router"]
-    C --> D{"🔐 JWT Auth?"}
-    D -->|Valid| E["📋 Route Handler"]
-    D -->|Invalid| F["❌ 401 Unauthorized"]
-    E --> G["🗄️ Database Adapter"]
-    G -->|Firebase Set?| H["☁️ Firestore"]
-    G -->|No Credentials| I["📁 localDb.json"]
-    H --> J["📨 Response"]
-    I --> J
-    J -->|JSON| B
-    E -->|Booking Created?| K["⚡ Socket.IO Emit"]
-    K -->|Real-Time Push| B
-
-    style A fill:#0d2137,stroke:#06b6d4,color:#67e8f9
-    style H fill:#1a1040,stroke:#8b5cf6,color:#c4b5fd
-    style I fill:#0a1628,stroke:#10b981,color:#6ee7b7
-    style K fill:#1a0d28,stroke:#ec4899,color:#f9a8d4
-```
-
----
-
-## 🤖 AI Agent Workflow
-
-### Agentic Copilot — End-to-End Flow
-
-```mermaid
-sequenceDiagram
-    actor Player as 🏃 Athlete
-    participant Chat as 💬 Chat Widget
-    participant NLP as 🧠 NLP Intent Parser
-    participant Search as 🔍 Venue Search Agent
-    participant Book as 📅 Booking Agent
-    participant DB as 🗄️ Database
-    participant Notify as ⚡ Socket.IO
-
-    Player->>Chat: "Book badminton tomorrow 7 PM near Gomti Nagar"
-    Chat->>NLP: POST /api/ai/chat
-
-    rect rgb(15, 23, 42)
-        Note over NLP: 🤖 AI Agent Processing Pipeline
-        NLP->>NLP: Extract entities (sport, date, time, location, budget)
-        NLP->>Search: Build geospatial + filter query
-        Search->>DB: Find venues matching sport, area, price
-        DB-->>Search: Return matched venues (sorted by rating)
-        Search->>Search: Apply budget filter & rank results
-    end
-
-    alt ✅ Slot Available
-        Search->>Book: Top venue selected, create booking
-        Book->>DB: Create booking with status "confirmed"
-        DB-->>Book: Booking confirmed
-        Book->>Notify: Emit "booking:new" event
-        Notify-->>Player: Real-time confirmation
-        Book-->>Chat: "✅ Booked at Gomti Nagar Sports Arena, 7:00 PM, ₹400"
-    else ❌ No Slots
-        Search-->>Chat: Return alternative venues with available times
-        Chat-->>Player: Render inline venue suggestion cards
-    end
-```
-
-### Multi-Agent System Architecture
-
-```mermaid
-graph LR
-    subgraph Agents["🤖 PlaySphere AI Agents"]
-        A1[🔍 Discovery Agent<br/>Venue search & filtering]
-        A2[📅 Booking Agent<br/>Slot reservation & conflicts]
-        A3[💰 Pricing Agent<br/>Dynamic pricing optimization]
-        A4[⭐ Recommendation Agent<br/>Personalized suggestions]
-        A5[📊 Demand Agent<br/>Trend prediction & analytics]
-    end
-    
-    A1 --> A2
-    A1 --> A4
-    A3 --> A2
-    A5 --> A3
-    A5 --> A4
-```
-
-| Agent | Role | Input | Output |
-| :--- | :--- | :--- | :--- |
-| **Discovery Agent** | Searches venues by sport, location, price, and amenities | User query + filters | Ranked venue list |
-| **Booking Agent** | Handles slot availability, conflict detection, and reservation | Venue + time + user | Confirmed booking |
-| **Pricing Agent** | Generates peak/off-peak/weekend pricing recommendations | Venue bookings data | Pricing matrix |
-| **Recommendation Agent** | Scores venues based on user preferences and play history | User profile + venues | Scored recommendations |
-| **Demand Agent** | Predicts trending sports, peak hours, and busiest days | Aggregate booking data | Demand insights |
-
-### NLP Intent Parsing Pipeline
-
-```mermaid
-flowchart TD
-    INPUT["💬 User Message"] --> LOWER["🔡 Normalize & Lowercase"]
-    LOWER --> S{"🏅 Sport\nDetected?"}
-    S -->|Yes| SPORT["football / badminton / cricket..."]
-    S -->|No| DEFAULT["Use user preferences"]
-    
-    LOWER --> L{"📍 Location\nDetected?"}
-    L -->|Yes| LOC["Extract area name"]
-    L -->|No| GEOLOC["Use GPS coordinates"]
-    
-    LOWER --> T{"🕐 Time\nDetected?"}
-    T -->|Yes| TIME["Parse hour → HH:00"]
-    T -->|No| NEXTSLOT["Find next available"]
-    
-    LOWER --> D{"📅 Date\nDetected?"}
-    D -->|Yes| DATE["today / tomorrow / specific date"]
-    D -->|No| TODAY["Default: today"]
-    
-    LOWER --> B{"💰 Budget\nDetected?"}
-    B -->|Yes| BUDGET["Extract max price"]
-    B -->|No| NOBUDGET["No price filter"]
-    
-    SPORT --> INTENT["🎯 Structured Intent"]
-    DEFAULT --> INTENT
-    LOC --> INTENT
-    GEOLOC --> INTENT
-    TIME --> INTENT
-    NEXTSLOT --> INTENT
-    DATE --> INTENT
-    TODAY --> INTENT
-    BUDGET --> INTENT
-    NOBUDGET --> INTENT
-    
-    INTENT --> CLASSIFY{"🤖 Intent\nClassification"}
-    CLASSIFY -->|book / find| SEARCH["🔍 Search + Book"]
-    CLASSIFY -->|recommend| RECOMMEND["⭐ Recommendations"]
-    CLASSIFY -->|demand / trends| ANALYTICS["📊 Demand Insights"]
-    CLASSIFY -->|schedule| SCHEDULE["📅 My Bookings"]
-    CLASSIFY -->|help / greeting| HELP["💡 Help Response"]
-
-    style INPUT fill:#0d2137,stroke:#06b6d4,color:#67e8f9
-    style INTENT fill:#1a1040,stroke:#8b5cf6,color:#c4b5fd
-    style CLASSIFY fill:#0a1628,stroke:#f59e0b,color:#fcd34d
-```
 
 ---
 
 ## ✨ Features
 
-### 🏃 For Athletes (Players)
+### 🏃 Player Features
+*   **Tactile Venue Discovery**: Multi-faceted filtering by sport type, area, price range, availability, and facility type.
+*   **Google Maps Navigation**: Visual map pins indicating venue locations, matching colors by sport type, and supporting gesture-cooperative scrolling.
+*   **Grounded AI Concierge**: natural language discovery query engine (e.g. *"Find a football turf in Aliganj under 500 rupees"*).
+*   **Ticket Dashboard**: Modern ticket viewer featuring automated ID codes (`PS-XXXX-XXXX`), dynamic status badges, and manual booking cancellations.
+*   **Tac-Light Theme Switcher**: Instant zero-flash theme transitions between a dark sports arena aesthetic and a warm cream Light mode.
 
-| Feature | Description |
-| :--- | :--- |
-| 🤖 **AI Sports Copilot** | Natural language chat to find and book venues — *"Find football turf for 8 players under ₹1200 near Chinhat"* |
-| 🗺️ **Live Venue Map** | Dark-themed interactive Leaflet map with custom markers, area popups, and venue density visualization |
-| 🔍 **Smart Filters** | Filter by sport, area, rating, price range, and sort by popularity or distance |
-| 📅 **Instant Slot Booking** | Interactive time grid showing real-time availability with one-click reservation |
-| ⭐ **Venue Reviews** | Rate and review venues with star ratings and written feedback |
-| 📋 **Booking History** | Track upcoming games and past reservations with cancel/refund support |
-| 💡 **AI Recommendations** | Personalized venue suggestions based on preferred sports and play history |
-| 🏷️ **Price Comparison** | View and compare prices across multiple venues at a glance |
+### 🏢 Owner Features
+*   **Claim/Verification Requests**: Secure, formal venue claim portal for linking public infrastructure to authenticated owner profiles.
+*   **Venue Management Console**: Configure pricing, upload pictures, list amenities, and toggle real-time slot availability.
+*   **Active Bookings Checklist**: Interface to track reservations, review player UTR codes, approve payments, and log bookings.
+*   **Tactile Revenue Analytics**: Real-time business metrics tracking Confirmation Rate, Revenue, and Venue Activity Ratios.
 
-### 🏢 For Venue Owners
+### 👮 Admin Features
+*   **Auto-Ingestion Pipeline**: Core interface to launch the hybrid scanner for municipal and private sports facility discovery.
+*   **Ingestion Telemetry Dashboard**: Visual 4x2 grid of counters tracking OSM Raw Fetched, Valid Normalized, Rejected Junk, Added, Updated, Skipped, Enriched, and Ingestion Errors.
+*   **Log Console Terminal**: Live-scrolling logs showing the source (Seed, OSM, or Enriched) and duplicate status of every venue processed.
+*   **Central approvals queue**: Approve/Reject owner registration claims and monitor the system lock configuration.
 
-| Feature | Description |
-| :--- | :--- |
-| 📊 **Analytics Dashboard** | SVG-rendered revenue bar charts, donut sport breakdown, sparkline trends, and KPI stat cards |
-| 💰 **AI Dynamic Pricing** | Automated pricing recommendations for peak hours, weekends, rainy days, and last-minute slots |
-| 📈 **Demand Prediction** | Trending sports, peak hours analysis, and day-wise demand forecasting |
-| 👥 **Customer Management** | View all bookings, user details, and booking sources (manual vs AI-booked) |
-| 🧠 **AI Insights Panel** | Actionable business intelligence — weekend surge alerts, off-peak opportunity tips, adoption metrics |
-| 📉 **Revenue Breakdown** | Month-over-month comparison tables with per-booking averages and share percentages |
-| 🏆 **Sport Performance** | Ranked sport leaderboard with booking counts, revenue, and progress bars |
-| 🔄 **Real-Time Updates** | Live booking feed with instant status changes and source tracking |
+### 🧠 AI Features
+*   **Booking Prefill Orchestration**: The AI Concierge extracts parameters (venue name, sport, date, time slot) from the chat conversation and builds a prefilled booking drawer, reducing reservations to a single click.
+*   **Sports Rules Guidance**: Conversational fallback mode that provides lightweight tips and gear lists while strictly restricting advice to sports.
 
-### 🛡️ Platform Features
-
-| Feature | Description |
-| :--- | :--- |
-| 🔐 **JWT Authentication** | Secure token-based auth with role-based access control (Player / Owner / Admin) |
-| ⚡ **Real-Time Updates** | Socket.IO powered live booking notifications and slot status changes |
-| 🌍 **Geospatial Queries** | Haversine distance calculation for proximity-based venue search |
-| 🎨 **Premium Dark UI** | Glassmorphism design with 12+ custom animations, gradient accents, and responsive layouts |
-| 📱 **Mobile Responsive** | Fully responsive across desktop, tablet, and mobile devices |
-| 🦶 **Professional Footer** | Multi-column footer with brand info, sport tags, platform links, social icons, and feature badges |
-| 🔥 **Firebase-Ready** | Firestore integration with graceful local JSON fallback for zero-dependency demos |
-| 📊 **Inline SVG Charts** | Zero-dependency bar charts, donut charts, and sparkline trends rendered as pure SVG |
 
 ---
 
-## 🗄️ Database Design
+## 📐 System Architecture
 
-### Entity Relationship Diagram
-
-```mermaid
-erDiagram
-    USER ||--o{ BOOKING : "creates"
-    USER ||--o{ REVIEW : "writes"
-    USER ||--o{ VENUE : "owns"
-    VENUE ||--o{ BOOKING : "hosts"
-    VENUE ||--o{ REVIEW : "receives"
-    VENUE }|--|| SPORT_CONFIG : "offers"
-
-    USER {
-        string _id PK
-        string username UK
-        string email UK
-        string password
-        string role "user | venue_owner | admin"
-        string phone
-        object location "GeoJSON Point"
-        array preferredSports
-        string skillLevel
-    }
-
-    VENUE {
-        string _id PK
-        string name
-        string description
-        string address
-        string area
-        string city
-        object location "GeoJSON Point"
-        array sports "SportConfig[]"
-        array amenities
-        ref owner FK "→ User"
-        float rating "0–5"
-        int totalReviews
-        object operatingHours
-        boolean isActive
-    }
-
-    BOOKING {
-        string _id PK
-        ref user FK "→ User"
-        ref venue FK "→ Venue"
-        string sport
-        int court
-        date date
-        string startTime
-        string endTime
-        float totalPrice
-        string status "pending | confirmed | cancelled | completed"
-        string paymentStatus
-        boolean isAgentBooked
-    }
-
-    REVIEW {
-        string _id PK
-        ref user FK "→ User"
-        ref venue FK "→ Venue"
-        int rating "1–5"
-        string comment
-    }
-
-    SPORT_CONFIG {
-        string name
-        int courts
-        float pricePerHour
-        int maxPlayers
-    }
-```
-
-### Database Adapter Architecture
-
-PlaySphere uses a **Mongoose-compatible adapter** (`mongooseMock.js`) that provides a unified interface for both **Firebase Firestore** and a **local JSON database**:
+PlaySphere AI is designed as a decentralized client-server web app backed by direct Cloud Firestore real-time subscriptions and serverless API endpoints.
 
 ```mermaid
-flowchart TB
-    subgraph Models["📦 Mongoose-Style Models"]
-        U[User.js]
-        V[Venue.js]
-        B[Booking.js]
-        R[Review.js]
-    end
-
-    subgraph Adapter["🔄 Database Adapter — mongooseMock.js"]
-        SCHEMA["Schema Definition<br/>fields, hooks, methods, statics"]
-        QE["Query Engine<br/>find, findOne, aggregate, populate"]
-        FILTER["In-Memory Filter<br/>$regex, $gte, $lte, $in, $or, $near, $text"]
-        HOOKS["Lifecycle Hooks<br/>pre/post save, deleteOne"]
-    end
-
-    subgraph Storage["💾 Storage Backend"]
-        FB["☁️ Firebase Firestore<br/>(if credentials provided)"]
-        LJ["📁 localDb.json<br/>(zero-dependency fallback)"]
-    end
-
-    Models -->|"require('./mongooseMock')"| Adapter
-    Adapter -->|"FIREBASE_PROJECT_ID set?"| FB
-    Adapter -->|"No credentials"| LJ
-
-    style Adapter fill:#1a1040,stroke:#8b5cf6,color:#c4b5fd
-    style FB fill:#1a0d00,stroke:#f59e0b,color:#fcd34d
-    style LJ fill:#001a0e,stroke:#10b981,color:#6ee7b7
+graph TD
+    User["User Client (Web Browser)"] -->|Next.js App Router| Frontend["Frontend Layer (React Client)"]
+    Frontend -->|Real-time Subscriptions| Firestore["Firebase Firestore Database"]
+    Frontend -->|Bearer ID Token Auth| API["Admin Ingestion API Route"]
+    Frontend -->|POST JSON Query| AIAPI["AI Concierge Router Route"]
+    
+    API -->|Queries Lucknow coordinates| OSM["OSM Overpass API"]
+    API -->|Optional Text Search| Google["Google Places API"]
+    API -->|Upgraded Priority Merge| Firestore
+    
+    AIAPI -->|Facts Grounding Query| Firestore
+    AIAPI -->|Prompt Context Assembly| LLM["Groq / Llama 3 LLM Service"]
+    LLM -->|Parsed JSON Parameters| AIAPI
+    AIAPI -->|Structured Rationale + Booking Prefill| Frontend
 ```
 
-**Supported Query Operators:**
-
-| Operator | Description | Example |
-| :--- | :--- | :--- |
-| `$regex` | Pattern matching with flags | `{ area: { $regex: 'gomti', $options: 'i' } }` |
-| `$gte` / `$lte` | Range comparisons | `{ rating: { $gte: 4.0 } }` |
-| `$in` | Match any value in array | `{ status: { $in: ['confirmed', 'completed'] } }` |
-| `$or` | Logical OR across conditions | `{ $or: [{ area: /gomti/i }, { name: /gomti/i }] }` |
-| `$near` | Geospatial proximity (Haversine) | `{ location: { $near: { $geometry: { coordinates: [80.9, 26.8] } } } }` |
-| `$text` | Full-text search across fields | `{ $text: { $search: 'badminton court' } }` |
-| `$sum` / `$avg` | Aggregation operators | `{ $group: { _id: '$sport', total: { $sum: '$totalPrice' } } }` |
+### Data Flow
+1.  **Discovery**: Admin triggers `/api/admin/discover-infrastructure`. The server crawls Lucknow's coordinate bounding box using the OpenStreetMap Overpass API, filters out junk (empty names, invalid coordinates), performs optional Google Places metadata enrichment, and saves them to Firestore under `source: osm_discovered` (unbookable).
+2.  **Claiming**: An Owner registers, submits a claim request with verification documents. Admin reviews and approves the claim. The venue's state changes to `ownerLinked: true, bookable: true`.
+3.  **Booking**: A Player searches, selects a slot, and makes a booking. The booking state is written to Firestore, instantly syncing with the Owner's dashboard via real-time hooks.
 
 ---
 

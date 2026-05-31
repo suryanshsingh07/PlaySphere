@@ -120,15 +120,17 @@ export default function AIChatbot() {
   };
 
   return (
-    <div style={{ position: 'fixed', bottom: '24px', right: '24px', zIndex: 1050 }}>
+    <div style={{ position: 'fixed', bottom: 'clamp(16px, 3vh, 24px)', right: 'clamp(16px, 3vw, 24px)', zIndex: 1050 }}>
       {/* Floating Chat Button */}
       {!isOpen && (
         <button
           onClick={() => setIsOpen(true)}
           className="btn animate-float"
           style={{
-            width: '60px',
-            height: '60px',
+            width: 'clamp(52px, 12vw, 60px)',
+            height: 'clamp(52px, 12vw, 60px)',
+            minWidth: '52px',
+            minHeight: '52px',
             borderRadius: '50%',
             background: 'var(--gradient-primary)',
             boxShadow: 'var(--glow-cyan), 0 8px 24px rgba(0,0,0,0.4)',
@@ -147,8 +149,8 @@ export default function AIChatbot() {
       {/* Expanded Chatbot Panel */}
       {isOpen && (
         <div className="glass-strong animate-slide-up" style={{
-          width: '380px',
-          height: '520px',
+          width: 'min(380px, 90vw)',
+          height: 'clamp(380px, 85vh, 520px)',
           display: 'flex',
           flexDirection: 'column',
           borderRadius: 'var(--radius-lg)',
@@ -158,9 +160,10 @@ export default function AIChatbot() {
         }}>
           {/* Header */}
           <div className="flex-between" style={{
-            padding: '16px',
+            padding: 'clamp(12px, 2vh, 16px)',
             borderBottom: '1px solid rgba(255,255,255,0.05)',
-            background: 'linear-gradient(135deg, rgba(6, 182, 212, 0.1) 0%, rgba(139, 92, 246, 0.1) 100%)'
+            background: 'linear-gradient(135deg, rgba(6, 182, 212, 0.1) 0%, rgba(139, 92, 246, 0.1) 100%)',
+            gap: 'clamp(8px, 2vw, 12px)'
           }}>
             <div className="flex-center gap-sm">
               <div className="flex-center" style={{
@@ -191,10 +194,10 @@ export default function AIChatbot() {
           <div style={{
             flexGrow: 1,
             overflowY: 'auto',
-            padding: '16px',
+            padding: 'clamp(12px, 2vh, 16px)',
             display: 'flex',
             flexDirection: 'column',
-            gap: '14px'
+            gap: 'clamp(10px, 2vw, 14px)'
           }}>
             {messages.map((msg) => (
               <div 
@@ -276,11 +279,11 @@ export default function AIChatbot() {
 
           {/* Quick Prompts */}
           {messages.length === 1 && (
-            <div style={{ padding: '0 16px', display: 'flex', flexDirection: 'column', gap: '6px', marginBottom: '8px' }}>
-              <div className="flex-center" style={{ justifyContent: 'flex-start', gap: '4px', fontSize: '0.75rem', color: 'var(--text-secondary)', fontWeight: 600 }}>
-                <HelpCircle size={12} /> Suggestion Prompts
+            <div style={{ padding: 'clamp(8px, 2vw, 12px) clamp(12px, 3vw, 16px)', display: 'flex', flexDirection: 'column', gap: 'clamp(4px, 1vw, 6px)', marginBottom: '8px' }}>
+              <div className="flex-center" style={{ justifyContent: 'flex-start', gap: '4px', fontSize: 'clamp(0.65rem, 1.5vw, 0.75rem)', color: 'var(--text-secondary)', fontWeight: 600 }}>
+                <HelpCircle size={12} /> Suggestions
               </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 'clamp(3px, 1vw, 4px)' }}>
                 {SUGGESTED_PROMPTS.map((p, idx) => (
                   <button
                     key={idx}
@@ -288,8 +291,8 @@ export default function AIChatbot() {
                     onClick={() => handleSendMessage(p)}
                     className="btn-ghost"
                     style={{
-                      fontSize: '0.75rem',
-                      padding: '6px 10px',
+                      fontSize: 'clamp(0.65rem, 1.5vw, 0.75rem)',
+                      padding: 'clamp(4px, 1vh, 6px) clamp(8px, 2vw, 10px)',
                       borderRadius: 'var(--radius-sm)',
                       textAlign: 'left',
                       border: '1px solid rgba(255,255,255,0.05)',
@@ -307,25 +310,25 @@ export default function AIChatbot() {
 
           {/* Footer Input */}
           <form onSubmit={handleSubmit} style={{
-            padding: '12px 16px',
+            padding: 'clamp(10px, 2vh, 12px) clamp(12px, 3vw, 16px)',
             borderTop: '1px solid rgba(255,255,255,0.05)',
             display: 'flex',
-            gap: '8px'
+            gap: 'clamp(6px, 1.5vw, 8px)'
           }}>
             <input
               type="text"
-              placeholder="Ask anything or book a slot..."
+              placeholder="Ask anything..."
               value={input}
               onChange={(e) => setInput(e.target.value)}
               className="form-input"
-              style={{ padding: '8px 12px', fontSize: '0.85rem' }}
+              style={{ padding: 'clamp(8px, 1.5vh, 12px) clamp(12px, 2vw, 16px)', fontSize: 'clamp(0.8rem, 1vw, 0.85rem)' }}
               disabled={loading}
             />
             <button
               type="submit"
               className="btn btn-primary"
               disabled={loading || !input.trim()}
-              style={{ width: '36px', height: '36px', padding: 0, borderRadius: 'var(--radius-md)', flexShrink: 0 }}
+              style={{ width: 'clamp(36px, 8vw, 44px)', height: 'clamp(36px, 8vw, 44px)', minWidth: '36px', minHeight: '36px', padding: 0, borderRadius: 'var(--radius-md)', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
             >
               <Send size={16} />
             </button>

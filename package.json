@@ -1,0 +1,39 @@
+{
+  "name": "playsphere-ai",
+  "version": "2.0.0",
+  "description": "Next-Generation AI-Assisted Sports Infrastructure Discovery & Real-Time Booking Platform for Lucknow",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
+    "type-check": "tsc --noEmit -p .",
+    "type-check:frontend": "tsc --noEmit -p frontend"
+  },
+  "dependencies": {
+    "next": "^16.0.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "typescript": "^5.6.2",
+    "tailwindcss": "^4.0.0",
+    "firebase": "^10.7.1",
+    "firebase-admin": "^12.0.1",
+    "lucide-react": "^0.408.0",
+    "@react-google-maps/api": "^2.20.0",
+    "groq-sdk": "^0.4.1",
+    "dotenv": "^16.3.1",
+    "axios": "^1.6.8"
+  },
+  "devDependencies": {
+    "@types/node": "^20.10.5",
+    "@types/react": "^18.2.45",
+    "@types/react-dom": "^18.2.18",
+    "autoprefixer": "^10.4.16",
+    "postcss": "^8.4.32",
+    "eslint": "^8.56.0",
+    "eslint-config-next": "^16.0.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

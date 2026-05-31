@@ -1,8 +1,13 @@
-const mongoose = require('./mongooseMock');
+const mongoose = require('mongoose');
 
 const connectDB = async () => {
-  console.log('✨ PlaySphere Database Adapter Loaded (Firebase Firestore / Local Fallback Active)');
+  try {
+    const conn = await mongoose.connect(process.env.MONGO_URI);
+    console.log(`✅ MongoDB Connected: ${conn.connection.host}`);
+  } catch (error) {
+    console.error(`❌ MongoDB Connection Error: ${error.message}`);
+    process.exit(1);
+  }
 };
 
 module.exports = connectDB;
-

@@ -7,10 +7,10 @@ import FeatureCard from '../components/FeatureCard';
 
 export default function Home() {
   const [stats, setStats] = useState({
-    totalVenues: 15,
-    totalBookings: 30,
-    totalUsers: 5,
-    totalSports: 5
+    totalVenues: 0,
+    totalBookings: 0,
+    totalUsers: 0,
+    totalSports: 0
   });
   const [loading, setLoading] = useState(true);
 
@@ -112,7 +112,7 @@ export default function Home() {
               <Link to="/explore" className="btn btn-primary btn-lg">
                 Explore Venues <ArrowRight size={18} />
               </Link>
-              <Link to="/auth" className="btn btn-ghost btn-lg">
+              <Link to="/register" className="btn btn-ghost btn-lg">
                 Join PlaySphere
               </Link>
             </div>
@@ -129,10 +129,10 @@ export default function Home() {
       }}>
         <div className="container">
           <div className="grid-4">
-            <StatsCard icon={Map} value={`${stats.totalVenues}`} label="Venues Available" description="Top-rated arenas in Lucknow" />
-            <StatsCard icon={Award} value={`${stats.totalSports}`} label="Sports Supported" description="Cricket, football, badminton & more" />
-            <StatsCard icon={TrendingUp} value={`${stats.totalBookings}`} label="Court Bookings" description="Seamless slot reservations" />
-            <StatsCard icon={Users} value={`${stats.totalUsers}`} label="Active Athletes" description="Vibrant sports community" />
+            <StatsCard icon={Map} value={loading ? '...' : `${stats.totalVenues}`} label="Venues Available" description="Top-rated arenas" />
+            <StatsCard icon={Award} value={loading ? '...' : `${stats.totalSports}`} label="Sports Supported" description="Cricket, football, badminton & more" />
+            <StatsCard icon={TrendingUp} value={loading ? '...' : `${stats.totalBookings}`} label="Court Bookings" description="Seamless slot reservations" />
+            <StatsCard icon={Users} value={loading ? '...' : `${stats.totalUsers}`} label="Active Athletes" description="Vibrant sports community" />
           </div>
         </div>
       </section>
@@ -206,7 +206,7 @@ export default function Home() {
                   Built for Lucknow Sports
                 </h3>
                 <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
-                  Seeded with 15+ real locations across Hazratganj, Gomti Nagar, Indira Nagar, and Aliganj.
+                  Real locations across major sports hubs.
                 </p>
               </div>
             </div>
@@ -223,7 +223,7 @@ export default function Home() {
                 Are you a sports club manager or turf owner? Join PlaySphere as a Venue Owner to unlock state-of-the-art administrative portals, dynamic revenue tracking charts, automated peak hour demand predictions, and customer review dashboards.
               </p>
               <div style={{ display: 'flex', gap: '16px', marginTop: '10px' }}>
-                <Link to="/auth" className="btn btn-secondary">
+                <Link to="/register" className="btn btn-secondary">
                   Register as Manager
                 </Link>
               </div>

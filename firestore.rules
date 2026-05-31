@@ -1,0 +1,91 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Helper functions
+    function isSignedIn() {
+      return request.auth != null;
+    }
+    
+    function isAdmin() {
+      return isSignedIn() && 
+             request.auth.token.admin == true;
+    }
+    
+    function isOwner(userId) {
+      return isSignedIn() && 
+             request.auth.uid == userId;
+    }
+    
+    function isVenueOwner(venueId) {
+      return isSignedIn() && 
+             get(/databases/$(database)/documents/venues/$(venueId)).data.ownerId == request.auth.uid;
+    }
+    
+    // Users collection
+    match /users/{userId} {
+      allow read: if isSignedIn() && (isOwner(userId) || isAdmin());
+      allow create: if isSignedIn();
+      allow update: if isOwner(userId);
+      allow delete: if isAdmin();
+    }
+    
+    // Venues collection (read-only for players, full for admins)
+    match /venues/{venueId} {
+      allow read: if isSignedIn();
+      allow create: if isAdmin() || isSignedIn(); // Players create claims
+      allow update: if isAdmin() || isVenueOwner(venueId);
+      allow delete: if isAdmin();
+      
+      // Reviews subcollection
+      match /reviews/{reviewId} {
+        allow read: if isSignedIn();
+        allow create: if isSignedIn();
+        allow update: if isOwner(resource.data.userId) || isAdmin();
+        allow delete: if isOwner(resource.data.userId) || isAdmin();
+      }
+    }
+    
+    // Bookings collection
+    match /bookings/{bookingId} {
+      allow read: if isSignedIn() && 
+                     (isOwner(resource.data.userId) || 
+                      isVenueOwner(resource.data.venueId) ||
+                      isAdmin());
+      allow create: if isSignedIn() && isOwner(request.resource.data.userId);
+      allow update: if isSignedIn() && 
+                       (isOwner(resource.data.userId) || 
+                        isVenueOwner(resource.data.venueId) ||
+                        isAdmin());
+      allow delete: if isAdmin() && 
+                       resource.data.status in ['cancelled', 'completed'];
+    }
+    
+    // Verification claims
+    match /verification_claims/{claimId} {
+      allow read: if isSignedIn() && 
+                     (isOwner(resource.data.userId) || isAdmin());
+      allow create: if isSignedIn() && 
+                       isOwner(request.resource.data.userId);
+      allow update: if isAdmin() || isOwner(resource.data.userId);
+      allow delete: if isAdmin();
+    }
+    
+    // Admin logs (admin only)
+    match /admin_logs/{logId} {
+      allow read: if isAdmin();
+      allow write: if isAdmin();
+    }
+    
+    // OSM Ingestion status (admin only)
+    match /ingestion_status/{statusId} {
+      allow read: if isAdmin();
+      allow write: if isAdmin();
+    }
+    
+    // Deny all other access
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

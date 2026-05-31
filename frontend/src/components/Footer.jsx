@@ -49,15 +49,15 @@ export default function Footer() {
         background: 'rgba(6,182,212,0.03)',
       }}>
         <div style={{
-          maxWidth: '1200px', margin: '0 auto', padding: '20px 24px',
-          display: 'flex', justifyContent: 'space-around', flexWrap: 'wrap', gap: '16px',
+          maxWidth: '1200px', margin: '0 auto', padding: 'clamp(14px, 3vh, 20px) clamp(16px, 4vw, 24px)',
+          display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(clamp(80px, 20vw, 150px), 1fr))', gap: 'clamp(12px, 2vw, 16px)',
         }}>
           {STATS.map((s, i) => (
             <div key={i} style={{ textAlign: 'center' }}>
-              <div style={{ fontSize: '1.5rem', fontWeight: 800, color: s.color, fontFamily: 'var(--font-display)' }}>
+              <div style={{ fontSize: 'clamp(1rem, 2.5vw, 1.5rem)', fontWeight: 800, color: s.color, fontFamily: 'var(--font-display)' }}>
                 {s.value}
               </div>
-              <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '2px' }}>{s.label}</div>
+              <div style={{ fontSize: 'clamp(0.65rem, 1.5vw, 0.75rem)', color: 'var(--text-muted)', marginTop: '2px' }}>{s.label}</div>
             </div>
           ))}
         </div>
@@ -65,29 +65,31 @@ export default function Footer() {
 
       {/* ── Main Footer Content ───────────────────── */}
       <div style={{
-        maxWidth: '1200px', margin: '0 auto', padding: '52px 24px 36px',
+        maxWidth: '1200px', margin: '0 auto', padding: 'clamp(32px, 8vh, 52px) clamp(16px, 4vw, 24px) clamp(24px, 5vh, 36px)',
         display: 'grid',
-        gridTemplateColumns: 'minmax(240px, 1.4fr) repeat(3, 1fr)',
-        gap: '48px',
+        gridTemplateColumns: 'repeat(auto-fit, minmax(clamp(150px, 30vw, 280px), 1fr))',
+        gap: 'clamp(32px, 6vw, 48px)',
       }}>
         {/* Brand Column */}
         <div>
           <Link to="/" style={{ display: 'inline-flex', alignItems: 'center', gap: '10px', marginBottom: '18px' }}>
             <div style={{
-              width: '38px', height: '38px',
+              width: 'clamp(32px, 6vw, 38px)', height: 'clamp(32px, 6vw, 38px)',
+              minWidth: '32px',
+              minHeight: '32px',
               background: 'var(--gradient-primary)',
               borderRadius: '10px',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               boxShadow: 'var(--glow-cyan)',
             }}>
-              <Sparkles size={20} color="#fff" />
+              <Sparkles size={18} color="#fff" />
             </div>
-            <span style={{ fontFamily: 'var(--font-display)', fontSize: '1.4rem', fontWeight: 800, color: '#fff' }}>
+            <span style={{ fontFamily: 'var(--font-display)', fontSize: 'clamp(1rem, 2.5vw, 1.4rem)', fontWeight: 800, color: '#fff' }}>
               Play<span style={{ background: 'var(--gradient-primary)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>Sphere</span>
             </span>
           </Link>
 
-          <p style={{ color: 'var(--text-secondary)', fontSize: '0.88rem', lineHeight: 1.7, marginBottom: '20px', maxWidth: '280px' }}>
+          <p style={{ color: 'var(--text-secondary)', fontSize: 'clamp(0.8rem, 1.5vw, 0.88rem)', lineHeight: 1.7, marginBottom: '20px', maxWidth: '280px' }}>
             India's first <strong style={{ color: '#fff' }}>Agentic AI</strong> sports infrastructure discovery and booking platform. Find, compare, and book courts with one natural language command.
           </p>
 
@@ -95,7 +97,7 @@ export default function Footer() {
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginBottom: '24px' }}>
             {SPORTS.map((s, i) => (
               <span key={i} style={{
-                fontSize: '0.72rem', padding: '3px 10px',
+                fontSize: 'clamp(0.65rem, 1vw, 0.72rem)', padding: '3px 10px',
                 background: 'rgba(255,255,255,0.04)',
                 border: '1px solid rgba(255,255,255,0.07)',
                 borderRadius: 'var(--radius-full)', color: 'var(--text-muted)',

@@ -1,4 +1,4 @@
-const mongoose = require('../config/mongooseMock');
+const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
 
 const UserSchema = new mongoose.Schema({
@@ -36,6 +36,14 @@ const UserSchema = new mongoose.Schema({
     type: String,
     enum: ['user', 'venue_owner', 'admin'],
     default: 'user',
+  },
+  isApproved: {
+    type: Boolean,
+    default: true,
+  },
+  isActive: {
+    type: Boolean,
+    default: true,
   },
   location: {
     type: {

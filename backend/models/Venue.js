@@ -1,4 +1,4 @@
-const mongoose = require('../config/mongooseMock');
+const mongoose = require('mongoose');
 
 const SportConfigSchema = new mongoose.Schema({
   name: {

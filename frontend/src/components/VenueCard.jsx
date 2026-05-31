@@ -67,7 +67,7 @@ export default function VenueCard({ venue, highlight = false }) {
       }}
     >
       {/* Card Header Image */}
-      <div style={{ position: 'relative', height: '170px', overflow: 'hidden' }}>
+      <div style={{ position: 'relative', aspectRatio: '16/9', overflow: 'hidden', minHeight: '140px' }}>
         <img 
           src={imageSrc} 
           alt={name} 
@@ -77,12 +77,12 @@ export default function VenueCard({ venue, highlight = false }) {
         {/* Price Overlay */}
         <div style={{
           position: 'absolute',
-          bottom: '12px',
-          right: '12px',
+          bottom: 'clamp(8px, 2vw, 12px)',
+          right: 'clamp(8px, 2vw, 12px)',
           background: 'rgba(10, 14, 26, 0.85)',
-          padding: '4px 10px',
+          padding: 'clamp(3px, 1vw, 6px) clamp(8px, 2vw, 12px)',
           borderRadius: 'var(--radius-sm)',
-          fontSize: '0.8rem',
+          fontSize: 'clamp(0.7rem, 1.2vw, 0.8rem)',
           fontWeight: 700,
           border: '1px solid rgba(255,255,255,0.1)',
         }}>
@@ -92,15 +92,15 @@ export default function VenueCard({ venue, highlight = false }) {
         {/* Operating Hours indicator */}
         <div style={{
           position: 'absolute',
-          top: '12px',
-          left: '12px',
+          top: 'clamp(8px, 2vw, 12px)',
+          left: 'clamp(8px, 2vw, 12px)',
           display: 'flex',
           alignItems: 'center',
           gap: '6px',
           background: 'rgba(15, 23, 42, 0.75)',
-          padding: '4px 8px',
+          padding: 'clamp(3px, 1vw, 6px) clamp(6px, 1.5vw, 10px)',
           borderRadius: 'var(--radius-full)',
-          fontSize: '0.75rem',
+          fontSize: 'clamp(0.65rem, 1vw, 0.75rem)',
           backdropFilter: 'blur(4px)',
         }}>
           <span className="pulse-dot"></span>
@@ -109,10 +109,10 @@ export default function VenueCard({ venue, highlight = false }) {
       </div>
 
       {/* Card Body */}
-      <div style={{ padding: '16px', display: 'flex', flexDirection: 'column', flexGrow: 1, gap: '12px' }}>
+      <div style={{ padding: 'clamp(12px, 3vw, 16px)', display: 'flex', flexDirection: 'column', flexGrow: 1, gap: 'clamp(8px, 2vw, 12px)' }}>
         {/* Name and Rating */}
         <div>
-          <h3 style={{ fontSize: '1.05rem', fontWeight: 700, lineHeight: 1.3, color: '#fff', marginBottom: '4px' }}>
+          <h3 style={{ fontSize: 'clamp(0.9rem, 2.5vw, 1.05rem)', fontWeight: 700, lineHeight: 1.3, color: '#fff', marginBottom: '4px' }}>
             {name}
           </h3>
           <div className="flex-center" style={{ justifyContent: 'flex-start', gap: '8px' }}>
@@ -124,9 +124,16 @@ export default function VenueCard({ venue, highlight = false }) {
         </div>
 
         {/* Address Area */}
-        <div className="flex-center" style={{ justifyContent: 'flex-start', gap: '6px', color: 'var(--text-secondary)', fontSize: '0.825rem' }}>
-          <MapPin size={14} className="text-gradient" />
-          <span>{area || 'Lucknow'}</span>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
+          <div className="flex-center" style={{ justifyContent: 'flex-start', gap: '6px', color: 'var(--text-secondary)', fontSize: '0.825rem' }}>
+            <MapPin size={14} className="text-gradient" />
+            <span>{area || 'Lucknow'}</span>
+          </div>
+          {venue.distance !== undefined && (
+            <div style={{ fontSize: '0.78rem', color: 'var(--accent-primary)', fontWeight: 700 }}>
+              ⚡ {venue.distance.toFixed(1)} km away
+            </div>
+          )}
         </div>
 
         {/* Sports Chips */}
@@ -138,6 +145,14 @@ export default function VenueCard({ venue, highlight = false }) {
             </span>
           ))}
         </div>
+
+        {/* Posted by owner details */}
+        {venue.owner?.username && (
+          <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '4px', borderTop: '1px solid rgba(255,255,255,0.03)', paddingTop: '6px', marginTop: '4px' }}>
+            <span>👤 Posted by:</span>
+            <span style={{ fontWeight: 600, color: 'var(--text-secondary)' }}>@{venue.owner.username}</span>
+          </div>
+        )}
 
         {/* Action Button */}
         <div style={{ marginTop: 'auto', paddingTop: '8px' }}>
